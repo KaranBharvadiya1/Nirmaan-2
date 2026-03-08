@@ -228,14 +228,14 @@
                     <input id="budget_currency" name="budget_currency" type="text" value="{{ old('budget_currency', 'INR') }}" class="form-control" readonly>
                 </div>
                 <div class="col-md-4">
-                    <label for="budget_min" class="form-label fw-semibold">Min Budget (₹)</label>
+                    <label for="budget_min" class="form-label fw-semibold">Min Budget (&#8377;)</label>
                     <input id="budget_min" name="budget_min" type="number" step="0.01" min="1000" value="{{ old('budget_min') }}" class="form-control{{ $errors->has('budget_min') ? ' is-invalid' : '' }}" required>
                     @error('budget_min')
                     <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
                 <div class="col-md-4">
-                    <label for="budget_max" class="form-label fw-semibold">Max Budget (₹)</label>
+                    <label for="budget_max" class="form-label fw-semibold">Max Budget (&#8377;)</label>
                     <input id="budget_max" name="budget_max" type="number" step="0.01" min="1000" value="{{ old('budget_max') }}" class="form-control{{ $errors->has('budget_max') ? ' is-invalid' : '' }}">
                     @error('budget_max')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -450,7 +450,7 @@
                 title: val('title') || '-',
                 projectTypeCategory: [val('project_type'), val('work_category')].filter(Boolean).join(' / ') || '-',
                 location: [val('site_address'), val('area_locality'), val('city'), val('district'), val('state'), val('postal_code'), val('landmark')].filter(Boolean).join(', ') || '-',
-                budget: '₹' + (val('budget_min') || '0') + (val('budget_max') ? ' - ₹' + val('budget_max') : ''),
+                budget: 'INR ' + (val('budget_min') || '0') + (val('budget_max') ? ' - INR ' + val('budget_max') : ''),
                 timeline: [val('required_start_date') ? ('Start: ' + val('required_start_date')) : '', val('deadline') ? ('Deadline: ' + val('deadline')) : '', val('expected_duration_days') ? ('Duration: ' + val('expected_duration_days') + ' days') : ''].filter(Boolean).join(' | ') || '-',
                 execution: [val('material_supply_mode'), val('labor_strength_required') ? ('Labor: ' + val('labor_strength_required')) : '', val('quality_expectations') ? 'Quality noted' : '', val('safety_requirements') ? 'Safety noted' : ''].filter(Boolean).join(' | ') || '-',
                 langVisibility: [val('preferred_language'), val('visibility')].filter(Boolean).join(' / ') || '-',

@@ -4,23 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Bid extends Model
+class ProjectHire extends Model
 {
     protected $fillable = [
         'project_id',
+        'owner_id',
         'contractor_id',
-        'quote_amount',
-        'proposed_timeline_days',
-        'cover_message',
+        'bid_id',
+        'agreed_amount',
+        'agreed_timeline_days',
+        'hired_at',
         'status',
     ];
 
     protected function casts(): array
     {
         return [
-            'quote_amount' => 'decimal:2',
+            'agreed_amount' => 'decimal:2',
+            'hired_at' => 'datetime',
         ];
     }
 
@@ -35,16 +37,24 @@ class Bid extends Model
     /**
      * @return BelongsTo<User, $this>
      */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
     public function contractor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'contractor_id');
     }
 
     /**
-     * @return HasOne<ProjectHire, $this>
+     * @return BelongsTo<Bid, $this>
      */
-    public function projectHire(): HasOne
+    public function bid(): BelongsTo
     {
-        return $this->hasOne(ProjectHire::class);
+        return $this->belongsTo(Bid::class);
     }
 }

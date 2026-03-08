@@ -185,8 +185,8 @@
                     ['key' => 'dashboard', 'icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'url' => route('owner.dashboard')],
                     ['key' => 'projects', 'icon' => 'bi-kanban', 'label' => 'Projects', 'url' => route('owner.projects')],
                     ['key' => 'bids', 'icon' => 'bi-receipt-cutoff', 'label' => 'Bids', 'url' => route('owner.bids')],
+                    ['key' => 'hires', 'icon' => 'bi-person-vcard', 'label' => 'Hires', 'url' => route('owner.hires')],
                     ['key' => 'contractors', 'icon' => 'bi-people', 'label' => 'Contractors', 'url' => '#'],
-                    ['key' => 'shortlist', 'icon' => 'bi-bookmark-check', 'label' => 'Shortlist', 'url' => '#'],
                 ],
             ],
             [
@@ -497,6 +497,7 @@
                 const allBadgeClasses = Object.values(bidStatusBadgeClassMap);
                 const appliedClass = bidStatusBadgeClassMap[status] || 'text-bg-secondary';
                 const appliedLabel = statusLabel || bidStatusLabelMap[status] || status;
+                const isLockedStatus = status === 'accepted' || status === 'withdrawn';
 
                 document.querySelectorAll('[data-bid-status-badge=\"' + bidId + '\"]').forEach(function (badge) {
                     allBadgeClasses.forEach(function (badgeClass) {
@@ -509,6 +510,7 @@
                 document.querySelectorAll('.js-bid-status-select[data-bid-id=\"' + bidId + '\"]').forEach(function (select) {
                     select.value = status;
                     select.dataset.currentStatus = status;
+                    select.disabled = isLockedStatus;
                 });
             }
 
@@ -610,7 +612,8 @@
                         showAjaxFlash(error.message || 'Bid status update failed. Please try again.', 'error');
                     } finally {
                         document.querySelectorAll('.js-bid-status-select[data-bid-id=\"' + bidId + '\"]').forEach(function (linkedSelect) {
-                            linkedSelect.disabled = false;
+                            const currentStatus = linkedSelect.dataset.currentStatus || '';
+                            linkedSelect.disabled = currentStatus === 'accepted' || currentStatus === 'withdrawn';
                         });
                     }
                 });

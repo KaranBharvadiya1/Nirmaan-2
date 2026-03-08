@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\OwnerUpdateBidStatusRequest;
 use App\Models\Bid;
+use App\Models\ProjectHire;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OwnerBidController extends Controller
 {
@@ -27,6 +29,7 @@ class OwnerBidController extends Controller
             })
             ->with([
                 'project:id,title,reference_code,status,owner_id',
+                'project.hire:id,project_id,bid_id,status',
                 'contractor:id,first_name,last_name,email',
             ])
             ->latest('created_at');
@@ -51,32 +54,61 @@ class OwnerBidController extends Controller
 
     public function changeBidStatus(OwnerUpdateBidStatusRequest $request, Bid $bid): JsonResponse|RedirectResponse
     {
-        $bid->loadMissing('project');
+        $bid->loadMissing('project.hire');
         abort_unless((int) $bid->project->owner_id === (int) $request->user()->id, 403);
 
         $nextStatus = (string) $request->validated()['status'];
-        $autoRejectedBidIds = [];
+        $existingHire = $bid->project->hire;
 
-        if ($nextStatus === 'accepted') {
-            $autoRejectedBidIds = Bid::query()
-                ->where('project_id', $bid->project_id)
-                ->where('id', '!=', $bid->id)
-                ->whereIn('status', ['pending', 'shortlisted'])
-                ->pluck('id')
-                ->all();
-
-            if ($autoRejectedBidIds !== []) {
-                Bid::query()
-                    ->whereIn('id', $autoRejectedBidIds)
-                    ->update(['status' => 'rejected']);
-            }
-
-            if ($bid->project->status === 'open') {
-                $bid->project->update(['status' => 'in_progress']);
-            }
+        if ($bid->status === 'withdrawn') {
+            return $this->bidStatusErrorResponse($request, 'Withdrawn bid cannot be updated.');
         }
 
-        $bid->update(['status' => $nextStatus]);
+        if ($bid->status === 'accepted' && $nextStatus !== 'accepted') {
+            return $this->bidStatusErrorResponse($request, 'Accepted bid cannot be changed.');
+        }
+
+        if ($existingHire && (int) $existingHire->bid_id !== (int) $bid->id) {
+            return $this->bidStatusErrorResponse($request, 'A contractor is already hired for this project.');
+        }
+
+        $autoRejectedBidIds = [];
+
+        DB::transaction(function () use ($bid, $nextStatus, &$autoRejectedBidIds): void {
+            if ($nextStatus === 'accepted') {
+                $autoRejectedBidIds = Bid::query()
+                    ->where('project_id', $bid->project_id)
+                    ->where('id', '!=', $bid->id)
+                    ->whereIn('status', ['pending', 'shortlisted'])
+                    ->pluck('id')
+                    ->all();
+
+                if ($autoRejectedBidIds !== []) {
+                    Bid::query()
+                        ->whereIn('id', $autoRejectedBidIds)
+                        ->update(['status' => 'rejected']);
+                }
+
+                ProjectHire::query()->updateOrCreate(
+                    ['project_id' => $bid->project_id],
+                    [
+                        'owner_id' => $bid->project->owner_id,
+                        'contractor_id' => $bid->contractor_id,
+                        'bid_id' => $bid->id,
+                        'agreed_amount' => $bid->quote_amount,
+                        'agreed_timeline_days' => $bid->proposed_timeline_days,
+                        'hired_at' => now(),
+                        'status' => 'active',
+                    ],
+                );
+
+                if ($bid->project->status !== 'in_progress') {
+                    $bid->project->update(['status' => 'in_progress']);
+                }
+            }
+
+            $bid->update(['status' => $nextStatus]);
+        });
 
         if ($request->expectsJson()) {
             $projectStatus = $bid->project->fresh()->status;
@@ -93,6 +125,15 @@ class OwnerBidController extends Controller
         }
 
         return back()->with('success', 'Bid status updated successfully.');
+    }
+
+    private function bidStatusErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message], 422);
+        }
+
+        return back()->with('error', $message);
     }
 
     private function countBidsForOwner(int $ownerId, ?string $status = null): int

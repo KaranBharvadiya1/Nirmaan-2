@@ -111,13 +111,40 @@ class OwnerProjectController extends Controller
     public function changeProjectStatus(Request $request, Project $project): JsonResponse|RedirectResponse
     {
         $this->assertProjectOwnership($request, $project);
+        $project->loadMissing('hire');
 
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::in(['open', 'reopen', 'in_progress', 'completed', 'cancelled'])],
         ]);
 
         $nextStatus = $validated['status'] === 'reopen' ? 'open' : $validated['status'];
+
+        if ($project->hire?->status === 'active' && $nextStatus === 'open') {
+            return $this->projectStatusErrorResponse($request, 'Cannot reopen a project with an active hired contractor.');
+        }
+
+        if ($project->hire?->status === 'completed' && $nextStatus !== 'completed') {
+            return $this->projectStatusErrorResponse($request, 'Completed hired project cannot be moved back.');
+        }
+
+        if ($nextStatus === 'open' && $project->bids()->where('status', 'accepted')->exists()) {
+            return $this->projectStatusErrorResponse($request, 'Project has an accepted bid and cannot be reopened.');
+        }
+
         $project->update(['status' => $nextStatus]);
+
+        if ($project->hire) {
+            $hireStatus = match ($nextStatus) {
+                'in_progress' => 'active',
+                'completed' => 'completed',
+                'cancelled' => 'cancelled',
+                default => null,
+            };
+
+            if ($hireStatus !== null && $project->hire->status !== $hireStatus) {
+                $project->hire->update(['status' => $hireStatus]);
+            }
+        }
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -156,6 +183,8 @@ class OwnerProjectController extends Controller
 
         $project->load([
             'projectDocuments',
+            'hire.contractor:id,first_name,last_name,email',
+            'hire.bid:id,project_id,contractor_id,quote_amount,proposed_timeline_days,cover_message',
             'bids' => function ($query): void {
                 $query->latest('created_at');
             },
@@ -173,6 +202,15 @@ class OwnerProjectController extends Controller
     private function isProjectEditable(Project $project): bool
     {
         return in_array($project->status, ['open', 'cancelled'], true);
+    }
+
+    private function projectStatusErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message], 422);
+        }
+
+        return back()->with('error', $message);
     }
 
     private function isProjectDeletable(Project $project): bool

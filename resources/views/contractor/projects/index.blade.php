@@ -62,7 +62,7 @@
             </div>
 
             <h2 class="h5 fw-bold mb-1">{{ $project->title }}</h2>
-            <p class="text-secondary small mb-3">{{ $project->project_type }} · {{ $project->work_category ?: 'General Construction' }}</p>
+            <p class="text-secondary small mb-3">{{ $project->project_type }} &middot; {{ $project->work_category ?: 'General Construction' }}</p>
 
             <div class="mb-2">
                 <p class="meta-label">Budget</p>

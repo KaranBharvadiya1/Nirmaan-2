@@ -116,6 +116,12 @@
         </div>
         <div class="col-6 col-xl-4">
             <article class="card kpi-card p-3 p-md-4">
+                <span class="kpi-label"><i class="bi bi-person-check"></i>Active Hires</span>
+                <p class="kpi-value mb-0">{{ $kpis['active_hires'] }}</p>
+            </article>
+        </div>
+        <div class="col-6 col-xl-4">
+            <article class="card kpi-card p-3 p-md-4">
                 <span class="kpi-label"><i class="bi bi-bookmark-star"></i>Shortlist Count</span>
                 <p class="kpi-value mb-0">{{ $kpis['shortlist_count'] }}</p>
             </article>
@@ -140,17 +146,17 @@
         <div class="col-12 col-md-6 col-xl-4">
             <article class="card quick-card p-4">
                 <div class="quick-icon mb-3"><i class="bi bi-clipboard2-check"></i></div>
-                <h3 class="h5 fw-semibold">View Projects</h3>
-                <p class="text-secondary mb-3">Track project status, budget, and location details in one place.</p>
-                <a href="{{ route('owner.projects') }}" class="btn btn-primary quick-btn">Open Projects</a>
+                <h3 class="h5 fw-semibold">Review Bids</h3>
+                <p class="text-secondary mb-3">Compare contractor quotes and shortlist the best fit.</p>
+                <a href="{{ route('owner.bids') }}" class="btn btn-primary quick-btn">Open Bids</a>
             </article>
         </div>
         <div class="col-12 col-md-6 col-xl-4">
             <article class="card quick-card p-4">
-                <div class="quick-icon mb-3"><i class="bi bi-people"></i></div>
-                <h3 class="h5 fw-semibold">Browse Contractors</h3>
-                <p class="text-secondary mb-3">Discover contractor profiles, portfolio, and ratings.</p>
-                <button type="button" class="btn btn-primary quick-btn" disabled>Coming Soon</button>
+                <div class="quick-icon mb-3"><i class="bi bi-person-vcard"></i></div>
+                <h3 class="h5 fw-semibold">Hired Contractors</h3>
+                <p class="text-secondary mb-3">Track active and completed hires with progress status.</p>
+                <a href="{{ route('owner.hires') }}" class="btn btn-primary quick-btn">Open Hires</a>
             </article>
         </div>
     </div>

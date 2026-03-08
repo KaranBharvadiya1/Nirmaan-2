@@ -300,7 +300,7 @@
                         <p class="doc-name">{{ $doc->original_name }}</p>
                         <p class="doc-meta">
                             {{ strtoupper((string) pathinfo($doc->original_name, PATHINFO_EXTENSION)) ?: 'FILE' }}
-                            · {{ $doc->file_size ? number_format($doc->file_size / 1024, 1).' KB' : 'Size unavailable' }}
+                            &middot; {{ $doc->file_size ? number_format($doc->file_size / 1024, 1).' KB' : 'Size unavailable' }}
                         </p>
                     </div>
                     <div class="d-flex gap-2">

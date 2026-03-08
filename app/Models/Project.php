@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class Project extends Model
@@ -87,5 +88,13 @@ class Project extends Model
     public function projectDocuments(): HasMany
     {
         return $this->hasMany(ProjectDocument::class);
+    }
+
+    /**
+     * @return HasOne<ProjectHire, $this>
+     */
+    public function hire(): HasOne
+    {
+        return $this->hasOne(ProjectHire::class);
     }
 }

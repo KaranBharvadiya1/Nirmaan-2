@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bid;
 use App\Models\ContractorShortlist;
 use App\Models\Project;
+use App\Models\ProjectHire;
 use App\Models\Shortlist;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class OwnerDashboardController extends Controller
             'in_progress_projects' => $this->countInProgressProjects($ownerId),
             'completed_projects' => $this->countProjectsByStatus($ownerId, 'completed'),
             'bids_received' => $this->countBidsReceived($ownerId),
+            'active_hires' => $this->countActiveHires($ownerId),
             'shortlist_count' => $this->countShortlistedContractors($ownerId),
         ];
 
@@ -84,5 +86,17 @@ class OwnerDashboardController extends Controller
         }
 
         return 0;
+    }
+
+    private function countActiveHires(int $ownerId): int
+    {
+        if (! Schema::hasTable('project_hires')) {
+            return 0;
+        }
+
+        return ProjectHire::query()
+            ->where('owner_id', $ownerId)
+            ->where('status', 'active')
+            ->count();
     }
 }

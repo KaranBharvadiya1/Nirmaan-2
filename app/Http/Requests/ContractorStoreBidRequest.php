@@ -19,7 +19,7 @@ class ContractorStoreBidRequest extends FormRequest
             return false;
         }
 
-        return $project->status === 'open' && (int) $project->owner_id !== (int) $user->id;
+        return (int) $project->owner_id !== (int) $user->id;
     }
 
     /**

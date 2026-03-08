@@ -133,7 +133,7 @@
                             data-project-id="{{ $bid->project_id }}"
                             data-status-url="{{ route('owner.bids.change_status', $bid) }}"
                             data-current-status="{{ $bid->status }}"
-                            @disabled($bid->status === 'withdrawn')
+                            @disabled(in_array($bid->status, ['accepted', 'withdrawn'], true))
                         >
                             @foreach ($statusUpdateOptions as $statusValue => $statusLabel)
                             <option value="{{ $statusValue }}" @selected($bid->status === $statusValue)>{{ $statusLabel }}</option>

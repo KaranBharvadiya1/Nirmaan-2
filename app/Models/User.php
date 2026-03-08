@@ -77,4 +77,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(Bid::class, 'contractor_id');
     }
+
+    /**
+     * @return HasMany<ProjectHire, $this>
+     */
+    public function ownerProjectHires(): HasMany
+    {
+        return $this->hasMany(ProjectHire::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<ProjectHire, $this>
+     */
+    public function contractorProjectHires(): HasMany
+    {
+        return $this->hasMany(ProjectHire::class, 'contractor_id');
+    }
 }

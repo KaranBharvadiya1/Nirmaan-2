@@ -5,6 +5,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContractorBidController;
 use App\Http\Controllers\OwnerBidController;
 use App\Http\Controllers\OwnerDashboardController;
+use App\Http\Controllers\OwnerHireController;
 use App\Http\Controllers\OwnerProjectController;
 use App\Http\Controllers\OwnerSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,8 @@ Route::middleware(['auth', 'role:Owner'])->prefix('owner')->name('owner.')->grou
 
     Route::get('/bids', [OwnerBidController::class, 'showReceivedBids'])->name('bids');
     Route::patch('/bids/{bid}/status', [OwnerBidController::class, 'changeBidStatus'])->name('bids.change_status');
+    Route::get('/hires', [OwnerHireController::class, 'showOwnerHires'])->name('hires');
+    Route::patch('/hires/{projectHire}/status', [OwnerHireController::class, 'saveOwnerHireStatus'])->name('hires.save_status');
 
     Route::get('/settings', [OwnerSettingsController::class, 'showProfileSettings'])->name('settings');
     Route::put('/settings', [OwnerSettingsController::class, 'saveProfileSettings'])->name('settings.save');
@@ -45,4 +48,7 @@ Route::middleware(['auth', 'role:Contractor'])->prefix('contractor')->name('cont
     Route::get('/projects', [ContractorBidController::class, 'showAvailableProjectsForBidding'])->name('projects');
     Route::get('/projects/{project}', [ContractorBidController::class, 'showProjectBidForm'])->name('projects.show');
     Route::post('/projects/{project}/bid', [ContractorBidController::class, 'submitProjectBid'])->name('projects.submit_bid');
+    Route::get('/bids', [ContractorBidController::class, 'showMySubmittedBids'])->name('bids');
+    Route::patch('/bids/{bid}/withdraw', [ContractorBidController::class, 'withdrawMyBid'])->name('bids.withdraw');
+    Route::get('/awards', [ContractorBidController::class, 'showAwardedProjects'])->name('awards');
 });

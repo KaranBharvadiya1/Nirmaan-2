@@ -40,12 +40,13 @@
 <div class="hero-panel mb-4">
     <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
         <div>
-            <p class="text-uppercase text-primary fw-semibold mb-1 small">Submit Bid</p>
+            <p class="text-uppercase text-primary fw-semibold mb-1 small">Project Details</p>
             <h1 class="fw-bold mb-2 h4 h-md-3">{{ $project->title }}</h1>
             <div class="d-flex flex-wrap gap-2">
                 <span class="badge text-bg-light border">{{ $project->reference_code }}</span>
                 <span class="badge text-bg-light border">{{ $project->project_type }}</span>
                 <span class="badge text-bg-light border">Deadline: {{ $project->deadline?->format('d M Y') }}</span>
+                <span class="badge text-bg-light border">Status: {{ str_replace('_', ' ', ucfirst($project->status)) }}</span>
                 @if($existingBid)
                 <span class="badge text-bg-info">Your Current Bid: {{ ucfirst($existingBid->status) }}</span>
                 @endif
@@ -58,6 +59,12 @@
         </div>
     </div>
 </div>
+
+@if(!empty($viewContextNote))
+<div class="alert alert-info border-0 shadow-sm mb-4">
+    {{ $viewContextNote }}
+</div>
+@endif
 
 <div class="row g-3 g-md-4">
     <div class="col-12 col-xl-7">
@@ -92,7 +99,7 @@
 
     <div class="col-12 col-xl-5">
         <div class="panel-card p-3 p-md-4">
-            <h2 class="h5 fw-bold mb-3">{{ $existingBid ? 'Update Your Bid' : 'Submit Your Bid' }}</h2>
+            <h2 class="h5 fw-bold mb-3">{{ $canSubmitBid ? ($existingBid ? 'Update Your Bid' : 'Submit Your Bid') : 'Your Bid Summary' }}</h2>
 
             @if ($errors->any())
             <div class="alert alert-danger">
@@ -104,6 +111,7 @@
             </div>
             @endif
 
+            @if($canSubmitBid)
             <form method="POST" action="{{ route('contractor.projects.submit_bid', $project) }}" class="d-flex flex-column gap-3">
                 @csrf
                 <div>
@@ -122,6 +130,26 @@
                     <i class="bi bi-send me-1"></i>{{ $existingBid ? 'Update Bid' : 'Submit Bid' }}
                 </button>
             </form>
+            @else
+                @if($existingBid)
+                <div class="d-flex flex-column gap-3">
+                    <div>
+                        <p class="detail-label">Quote Amount</p>
+                        <p class="detail-value">&#8377;{{ number_format((float) $existingBid->quote_amount, 2) }}</p>
+                    </div>
+                    <div>
+                        <p class="detail-label">Proposed Timeline</p>
+                        <p class="detail-value">{{ $existingBid->proposed_timeline_days ? $existingBid->proposed_timeline_days.' days' : 'Not set' }}</p>
+                    </div>
+                    <div>
+                        <p class="detail-label">Proposal Message</p>
+                        <p class="mb-0 text-secondary">{{ $existingBid->cover_message ?: 'Not provided' }}</p>
+                    </div>
+                </div>
+                @else
+                <p class="mb-0 text-secondary">Bidding is not available for this project now.</p>
+                @endif
+            @endif
         </div>
     </div>
 </div>

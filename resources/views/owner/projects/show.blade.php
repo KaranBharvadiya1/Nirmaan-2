@@ -326,6 +326,7 @@
                                 data-project-id="{{ $bid->project_id }}"
                                 data-status-url="{{ route('owner.bids.change_status', $bid) }}"
                                 data-current-status="{{ $bid->status }}"
+                                @disabled(in_array($bid->status, ['accepted', 'withdrawn'], true))
                             >
                                 @foreach ($bidStatusOptions as $bidStatusValue => $bidStatusLabel)
                                 <option value="{{ $bidStatusValue }}" @selected($bid->status === $bidStatusValue)>{{ $bidStatusLabel }}</option>
@@ -342,6 +343,31 @@
 
     <div class="col-12 col-xl-4">
         <div class="sticky-info d-flex flex-column gap-3">
+            @if($project->hire)
+            <div class="panel-card p-3 p-md-4">
+                <h2 class="section-title">Current Hire</h2>
+                <div class="detail-item mb-2">
+                    <p class="detail-label">Contractor</p>
+                    <p class="detail-value">
+                        {{ trim(($project->hire->contractor->first_name ?? '').' '.($project->hire->contractor->last_name ?? '')) ?: 'Contractor #'.$project->hire->contractor_id }}
+                    </p>
+                </div>
+                <div class="detail-item mb-2">
+                    <p class="detail-label">Status</p>
+                    <p class="detail-value text-capitalize">{{ $project->hire->status }}</p>
+                </div>
+                <div class="detail-item mb-2">
+                    <p class="detail-label">Agreed Amount</p>
+                    <p class="detail-value">&#8377;{{ number_format((float) $project->hire->agreed_amount, 2) }}</p>
+                </div>
+                <div class="detail-item mb-3">
+                    <p class="detail-label">Agreed Timeline</p>
+                    <p class="detail-value">{{ $project->hire->agreed_timeline_days ? $project->hire->agreed_timeline_days.' days' : 'Not set' }}</p>
+                </div>
+                <a href="{{ route('owner.hires') }}" class="btn btn-outline-primary btn-sm">Open Hires</a>
+            </div>
+            @endif
+
             <div class="panel-card p-3 p-md-4">
                 <h2 class="section-title">Timeline & Budget</h2>
                 <div class="detail-item mb-2">
