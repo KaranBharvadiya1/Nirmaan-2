@@ -50,7 +50,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()
-            ->route('home')
+            ->route($this->webLandingRouteForRole($user->role))
             ->with('success', 'Account created successfully. You are now logged in.');
     }
 
@@ -84,8 +84,10 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $user = $request->user();
+
         return redirect()
-            ->intended(route('home'))
+            ->intended(route($this->webLandingRouteForRole((string) $user?->role)))
             ->with('success', 'Logged in successfully.');
     }
 
@@ -164,5 +166,10 @@ class AuthController extends Controller
     private function isApiRequest(Request $request): bool
     {
         return $request->expectsJson() || $request->is('api/*');
+    }
+
+    private function webLandingRouteForRole(string $role): string
+    {
+        return $role === 'Owner' ? 'owner.dashboard' : 'home';
     }
 }
