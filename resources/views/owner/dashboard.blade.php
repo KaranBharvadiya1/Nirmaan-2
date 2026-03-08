@@ -126,7 +126,7 @@
 <section>
     <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
         <h2 class="h4 fw-bold mb-0">Quick Actions</h2>
-        <p class="small text-secondary mb-0">These pages will be wired next.</p>
+        <p class="small text-secondary mb-0">Start posting real projects to activate your pipeline.</p>
     </div>
     <div class="row g-3 g-md-4">
         <div class="col-12 col-md-6 col-xl-4">
@@ -134,15 +134,15 @@
                 <div class="quick-icon mb-3"><i class="bi bi-plus-square"></i></div>
                 <h3 class="h5 fw-semibold">Post Project</h3>
                 <p class="text-secondary mb-3">Create a new project and invite contractors to bid.</p>
-                <button type="button" class="btn btn-primary quick-btn" disabled>Coming Soon</button>
+                <a href="{{ route('owner.projects.create') }}" class="btn btn-primary quick-btn">Create Now</a>
             </article>
         </div>
         <div class="col-12 col-md-6 col-xl-4">
             <article class="card quick-card p-4">
                 <div class="quick-icon mb-3"><i class="bi bi-clipboard2-check"></i></div>
-                <h3 class="h5 fw-semibold">View Bids</h3>
-                <p class="text-secondary mb-3">Compare incoming contractor bids and choose the best one.</p>
-                <button type="button" class="btn btn-primary quick-btn" disabled>Coming Soon</button>
+                <h3 class="h5 fw-semibold">View Projects</h3>
+                <p class="text-secondary mb-3">Track project status, budget, and location details in one place.</p>
+                <a href="{{ route('owner.projects') }}" class="btn btn-primary quick-btn">Open Projects</a>
             </article>
         </div>
         <div class="col-12 col-md-6 col-xl-4">
@@ -156,4 +156,3 @@
     </div>
 </section>
 @endsection
-

@@ -170,6 +170,10 @@ class AuthController extends Controller
 
     private function webLandingRouteForRole(string $role): string
     {
-        return $role === 'Owner' ? 'owner.dashboard' : 'home';
+        return match ($role) {
+            'Owner' => 'owner.dashboard',
+            'Contractor' => 'contractor.projects',
+            default => 'home',
+        };
     }
 }

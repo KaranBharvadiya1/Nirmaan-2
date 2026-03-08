@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $pageTitle ?? 'Owner Panel - Nirmaan' }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -182,8 +183,8 @@
                 'title' => 'Main',
                 'items' => [
                     ['key' => 'dashboard', 'icon' => 'bi-speedometer2', 'label' => 'Dashboard', 'url' => route('owner.dashboard')],
-                    ['key' => 'projects', 'icon' => 'bi-kanban', 'label' => 'Projects', 'url' => '#'],
-                    ['key' => 'bids', 'icon' => 'bi-receipt-cutoff', 'label' => 'Bids', 'url' => '#'],
+                    ['key' => 'projects', 'icon' => 'bi-kanban', 'label' => 'Projects', 'url' => route('owner.projects')],
+                    ['key' => 'bids', 'icon' => 'bi-receipt-cutoff', 'label' => 'Bids', 'url' => route('owner.bids')],
                     ['key' => 'contractors', 'icon' => 'bi-people', 'label' => 'Contractors', 'url' => '#'],
                     ['key' => 'shortlist', 'icon' => 'bi-bookmark-check', 'label' => 'Shortlist', 'url' => '#'],
                 ],
@@ -202,6 +203,14 @@
     <div id="flash-message" class="position-fixed top-50 start-50 translate-middle" style="z-index: 2000;">
         <div class="alert alert-success shadow-lg mb-0" role="alert">
             {{ session('success') }}
+        </div>
+    </div>
+    @endif
+
+    @if (session('error'))
+    <div id="flash-error" class="position-fixed top-50 start-50 translate-middle" style="z-index: 2000;">
+        <div class="alert alert-danger shadow-lg mb-0" role="alert">
+            {{ session('error') }}
         </div>
     </div>
     @endif
@@ -301,22 +310,313 @@
         </main>
     </div>
 
+    <div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0" id="confirmActionModalLabel">Please Confirm</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="confirmActionMessage">Are you sure you want to continue?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmActionSubmitBtn">Yes, Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const flashMessage = document.getElementById('flash-message');
-            if (!flashMessage) return;
+            const flashElements = ['flash-message', 'flash-error']
+                .map(function (id) {
+                    return document.getElementById(id);
+                })
+                .filter(Boolean);
 
-            setTimeout(function () {
-                flashMessage.classList.add('opacity-0');
-                flashMessage.style.transition = 'opacity 0.6s ease';
+            flashElements.forEach(function (flashElement) {
                 setTimeout(function () {
-                    flashMessage.remove();
-                }, 700);
-            }, 3000);
+                    flashElement.classList.add('opacity-0');
+                    flashElement.style.transition = 'opacity 0.6s ease';
+                    setTimeout(function () {
+                        flashElement.remove();
+                    }, 700);
+                }, 3000);
+            });
+
+            const confirmModalElement = document.getElementById('confirmActionModal');
+            const confirmMessageElement = document.getElementById('confirmActionMessage');
+            const confirmSubmitButton = document.getElementById('confirmActionSubmitBtn');
+            const confirmModal = confirmModalElement ? bootstrap.Modal.getOrCreateInstance(confirmModalElement) : null;
+            let pendingForm = null;
+
+            document.querySelectorAll('form.js-confirm-submit').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (form.dataset.confirmed === 'true') {
+                        form.dataset.confirmed = 'false';
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const customMessage = form.dataset.confirmMessage || 'Are you sure you want to continue?';
+                    if (confirmMessageElement) {
+                        confirmMessageElement.textContent = customMessage;
+                    }
+
+                    pendingForm = form;
+                    if (confirmModal) {
+                        confirmModal.show();
+                    }
+                });
+            });
+
+            if (confirmSubmitButton) {
+                confirmSubmitButton.addEventListener('click', function () {
+                    if (!pendingForm) {
+                        return;
+                    }
+
+                    pendingForm.dataset.confirmed = 'true';
+                    pendingForm.requestSubmit();
+                    pendingForm = null;
+
+                    if (confirmModal) {
+                        confirmModal.hide();
+                    }
+                });
+            }
+
+            if (confirmModalElement) {
+                confirmModalElement.addEventListener('hidden.bs.modal', function () {
+                    pendingForm = null;
+                });
+            }
+
+            const csrfToken = document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') || '';
+            const statusBadgeClassMap = {
+                open: 'text-bg-primary',
+                in_progress: 'text-bg-warning',
+                completed: 'text-bg-success',
+                cancelled: 'text-bg-danger',
+            };
+
+            const statusLabelMap = {
+                open: 'Open',
+                in_progress: 'In Progress',
+                completed: 'Completed',
+                cancelled: 'Cancelled',
+            };
+
+            const bidStatusBadgeClassMap = {
+                pending: 'text-bg-secondary',
+                shortlisted: 'text-bg-info',
+                accepted: 'text-bg-success',
+                rejected: 'text-bg-danger',
+                withdrawn: 'text-bg-dark',
+            };
+
+            const bidStatusLabelMap = {
+                pending: 'Pending',
+                shortlisted: 'Shortlisted',
+                accepted: 'Accepted',
+                rejected: 'Rejected',
+                withdrawn: 'Withdrawn',
+            };
+
+            const ajaxFlashContainer = document.createElement('div');
+            ajaxFlashContainer.style.position = 'fixed';
+            ajaxFlashContainer.style.top = '50%';
+            ajaxFlashContainer.style.left = '50%';
+            ajaxFlashContainer.style.transform = 'translate(-50%, -50%)';
+            ajaxFlashContainer.style.zIndex = '2100';
+            document.body.appendChild(ajaxFlashContainer);
+
+            function showAjaxFlash(message, type) {
+                ajaxFlashContainer.innerHTML = '';
+                const alert = document.createElement('div');
+                alert.className = 'alert shadow-lg mb-0 ' + (type === 'error' ? 'alert-danger' : 'alert-success');
+                alert.textContent = message;
+                ajaxFlashContainer.appendChild(alert);
+
+                setTimeout(function () {
+                    alert.classList.add('opacity-0');
+                    alert.style.transition = 'opacity 0.6s ease';
+                    setTimeout(function () {
+                        alert.remove();
+                    }, 700);
+                }, 2500);
+            }
+
+            function updateProjectActionState(projectId, status) {
+                const canModify = status === 'open' || status === 'cancelled';
+
+                document.querySelectorAll('[data-project-edit-action=\"' + projectId + '\"]').forEach(function (editLink) {
+                    if (canModify) {
+                        editLink.classList.remove('disabled');
+                        editLink.removeAttribute('aria-disabled');
+                        editLink.removeAttribute('tabindex');
+                    } else {
+                        editLink.classList.add('disabled');
+                        editLink.setAttribute('aria-disabled', 'true');
+                        editLink.setAttribute('tabindex', '-1');
+                    }
+                });
+
+                document.querySelectorAll('[data-project-delete-action=\"' + projectId + '\"]').forEach(function (deleteBtn) {
+                    const hasBids = deleteBtn.dataset.hasBids === '1';
+                    deleteBtn.disabled = hasBids ? true : !canModify;
+                });
+            }
+
+            function updateProjectStatusUi(projectId, status, statusLabel) {
+                const allBadgeClasses = Object.values(statusBadgeClassMap);
+                const appliedClass = statusBadgeClassMap[status] || 'text-bg-secondary';
+                const appliedLabel = statusLabel || statusLabelMap[status] || status;
+
+                document.querySelectorAll('[data-project-status-badge=\"' + projectId + '\"]').forEach(function (badge) {
+                    allBadgeClasses.forEach(function (badgeClass) {
+                        badge.classList.remove(badgeClass);
+                    });
+                    badge.classList.add(appliedClass);
+                    badge.textContent = appliedLabel;
+                });
+
+                document.querySelectorAll('.js-project-status-select[data-project-id=\"' + projectId + '\"]').forEach(function (select) {
+                    select.value = status;
+                    select.dataset.currentStatus = status;
+                });
+
+                updateProjectActionState(projectId, status);
+            }
+
+            function updateBidStatusUi(bidId, status, statusLabel) {
+                const allBadgeClasses = Object.values(bidStatusBadgeClassMap);
+                const appliedClass = bidStatusBadgeClassMap[status] || 'text-bg-secondary';
+                const appliedLabel = statusLabel || bidStatusLabelMap[status] || status;
+
+                document.querySelectorAll('[data-bid-status-badge=\"' + bidId + '\"]').forEach(function (badge) {
+                    allBadgeClasses.forEach(function (badgeClass) {
+                        badge.classList.remove(badgeClass);
+                    });
+                    badge.classList.add(appliedClass);
+                    badge.textContent = appliedLabel;
+                });
+
+                document.querySelectorAll('.js-bid-status-select[data-bid-id=\"' + bidId + '\"]').forEach(function (select) {
+                    select.value = status;
+                    select.dataset.currentStatus = status;
+                });
+            }
+
+            document.querySelectorAll('.js-project-status-select').forEach(function (select) {
+                select.addEventListener('change', async function () {
+                    const projectId = select.dataset.projectId || '';
+                    const statusUrl = select.dataset.statusUrl || '';
+                    const previousStatus = select.dataset.currentStatus || '';
+                    const requestedStatus = select.value;
+
+                    if (!projectId || !statusUrl || !requestedStatus) {
+                        return;
+                    }
+
+                    select.disabled = true;
+
+                    try {
+                        const response = await fetch(statusUrl, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({ status: requestedStatus }),
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Unable to update project status.');
+                        }
+
+                        updateProjectStatusUi(projectId, data.status, data.status_label);
+                        showAjaxFlash(data.message || 'Project status updated successfully.', 'success');
+                    } catch (error) {
+                        document.querySelectorAll('.js-project-status-select[data-project-id=\"' + projectId + '\"]').forEach(function (linkedSelect) {
+                            linkedSelect.value = previousStatus;
+                        });
+
+                        showAjaxFlash(error.message || 'Status update failed. Please try again.', 'error');
+                    } finally {
+                        document.querySelectorAll('.js-project-status-select[data-project-id=\"' + projectId + '\"]').forEach(function (linkedSelect) {
+                            linkedSelect.disabled = false;
+                        });
+                    }
+                });
+            });
+
+            document.querySelectorAll('.js-bid-status-select').forEach(function (select) {
+                select.addEventListener('change', async function () {
+                    const bidId = select.dataset.bidId || '';
+                    const projectId = select.dataset.projectId || '';
+                    const statusUrl = select.dataset.statusUrl || '';
+                    const previousStatus = select.dataset.currentStatus || '';
+                    const requestedStatus = select.value;
+
+                    if (!bidId || !statusUrl || !requestedStatus) {
+                        return;
+                    }
+
+                    select.disabled = true;
+
+                    try {
+                        const response = await fetch(statusUrl, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({ status: requestedStatus }),
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Unable to update bid status.');
+                        }
+
+                        updateBidStatusUi(bidId, data.status, data.status_label);
+
+                        if (Array.isArray(data.auto_rejected_bid_ids)) {
+                            data.auto_rejected_bid_ids.forEach(function (rejectedBidId) {
+                                updateBidStatusUi(String(rejectedBidId), 'rejected', 'Rejected');
+                            });
+                        }
+
+                        if (projectId && data.project_status) {
+                            updateProjectStatusUi(projectId, data.project_status, statusLabelMap[data.project_status] || data.project_status);
+                        }
+
+                        showAjaxFlash(data.message || 'Bid status updated successfully.', 'success');
+                    } catch (error) {
+                        document.querySelectorAll('.js-bid-status-select[data-bid-id=\"' + bidId + '\"]').forEach(function (linkedSelect) {
+                            linkedSelect.value = previousStatus;
+                        });
+
+                        showAjaxFlash(error.message || 'Bid status update failed. Please try again.', 'error');
+                    } finally {
+                        document.querySelectorAll('.js-bid-status-select[data-bid-id=\"' + bidId + '\"]').forEach(function (linkedSelect) {
+                            linkedSelect.disabled = false;
+                        });
+                    }
+                });
+            });
         });
     </script>
     @stack('scripts')
 </body>
 </html>
-
