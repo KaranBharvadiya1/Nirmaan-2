@@ -54,14 +54,27 @@
     </style>
 </head>
 <body class="bg-white">
-    @if(session('showLogin'))
+    @php
+        $contactErrors = $errors->getBag('contact');
+        $signupErrors = $errors->getBag('signup');
+        $loginErrors = $errors->getBag('login');
+
+        $autoAuthForm = null;
+        if (session('showSignup') || $signupErrors->any()) {
+            $autoAuthForm = 'signup';
+        } elseif (session('showLogin') || $loginErrors->any()) {
+            $autoAuthForm = 'login';
+        }
+    @endphp
+
+    @if($autoAuthForm)
     <script>
-        window.__SHOW_LOGIN_MODAL__ = true;
+        window.__SHOW_AUTH_MODAL__ = @json($autoAuthForm);
     </script>
     @endif
 
     @if (session('success'))
-    <div id="flash-message" class="position-fixed top-0 start-50 translate-middle-x mt-3 z-3">
+    <div id="flash-message" class="position-fixed top-50 start-50 translate-middle" style="z-index: 2000;">
         <div class="alert alert-success shadow-lg mb-0" role="alert">
             {{ session('success') }}
         </div>
@@ -255,22 +268,43 @@
                         <div class="bg-white rounded-3 shadow-sm p-4 p-lg-5">
                             <form method="POST" action="{{ route('contact.submit') }}">
                                 @csrf
+                                @if($contactErrors->any())
+                                <div class="alert alert-danger mb-3" role="alert">
+                                    <ul class="mb-0 ps-3">
+                                        @foreach($contactErrors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                                @endif
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="first_name" class="form-label">First Name</label>
-                                        <input id="first_name" type="text" name="first_name" class="form-control" required>
+                                        <input id="first_name" type="text" name="first_name" value="{{ old('first_name') }}" class="form-control{{ $contactErrors->has('first_name') ? ' is-invalid' : '' }}" required>
+                                        @if($contactErrors->has('first_name'))
+                                        <div class="invalid-feedback">{{ $contactErrors->first('first_name') }}</div>
+                                        @endif
                                     </div>
                                     <div class="col-md-6">
                                         <label for="last_name" class="form-label">Last Name</label>
-                                        <input id="last_name" type="text" name="last_name" class="form-control" required>
+                                        <input id="last_name" type="text" name="last_name" value="{{ old('last_name') }}" class="form-control{{ $contactErrors->has('last_name') ? ' is-invalid' : '' }}" required>
+                                        @if($contactErrors->has('last_name'))
+                                        <div class="invalid-feedback">{{ $contactErrors->first('last_name') }}</div>
+                                        @endif
                                     </div>
                                     <div class="col-12">
                                         <label for="email" class="form-label">Email Address</label>
-                                        <input id="email" type="email" name="email" class="form-control" required>
+                                        <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control{{ $contactErrors->has('email') ? ' is-invalid' : '' }}" required>
+                                        @if($contactErrors->has('email'))
+                                        <div class="invalid-feedback">{{ $contactErrors->first('email') }}</div>
+                                        @endif
                                     </div>
                                     <div class="col-12">
                                         <label for="message" class="form-label">Message</label>
-                                        <textarea id="message" name="message" rows="5" class="form-control"></textarea>
+                                        <textarea id="message" name="message" rows="5" class="form-control{{ $contactErrors->has('message') ? ' is-invalid' : '' }}">{{ old('message') }}</textarea>
+                                        @if($contactErrors->has('message'))
+                                        <div class="invalid-feedback">{{ $contactErrors->first('message') }}</div>
+                                        @endif
                                     </div>
                                     <div class="col-12">
                                         <button type="submit" class="btn btn-primary w-100 py-2">Send Message</button>
@@ -354,23 +388,47 @@
                     <form id="signupForm" action="{{ route('signup.submit') }}" method="POST" class="d-none">
                         @csrf
                         <h3 class="h4 fw-bold text-primary mb-3">Create Account</h3>
+                        @if($signupErrors->any())
+                        <div class="alert alert-danger mb-3" role="alert">
+                            <ul class="mb-0 ps-3">
+                                @foreach($signupErrors->all() as $error)
+                                <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        @endif
                         <div class="mb-3">
-                            <input type="text" name="first_name" placeholder="First Name" required class="form-control">
+                            <input type="text" name="first_name" value="{{ old('first_name') }}" placeholder="First Name" required class="form-control{{ $signupErrors->has('first_name') ? ' is-invalid' : '' }}">
+                            @if($signupErrors->has('first_name'))
+                            <div class="invalid-feedback">{{ $signupErrors->first('first_name') }}</div>
+                            @endif
                         </div>
                         <div class="mb-3">
-                            <input type="text" name="last_name" placeholder="Last Name" required class="form-control">
+                            <input type="text" name="last_name" value="{{ old('last_name') }}" placeholder="Last Name" required class="form-control{{ $signupErrors->has('last_name') ? ' is-invalid' : '' }}">
+                            @if($signupErrors->has('last_name'))
+                            <div class="invalid-feedback">{{ $signupErrors->first('last_name') }}</div>
+                            @endif
                         </div>
                         <div class="mb-3">
-                            <select name="role" required class="form-select">
-                                <option value="Owner">Owner</option>
-                                <option value="Contractor">Contractor</option>
+                            <select name="role" required class="form-select{{ $signupErrors->has('role') ? ' is-invalid' : '' }}">
+                                <option value="Owner" @selected(old('role', 'Owner') === 'Owner')>Owner</option>
+                                <option value="Contractor" @selected(old('role') === 'Contractor')>Contractor</option>
                             </select>
+                            @if($signupErrors->has('role'))
+                            <div class="invalid-feedback">{{ $signupErrors->first('role') }}</div>
+                            @endif
                         </div>
                         <div class="mb-3">
-                            <input type="email" name="email" placeholder="Your Business Email" required class="form-control">
+                            <input type="email" name="email" value="{{ old('email') }}" placeholder="Your Business Email" required class="form-control{{ $signupErrors->has('email') ? ' is-invalid' : '' }}">
+                            @if($signupErrors->has('email'))
+                            <div class="invalid-feedback">{{ $signupErrors->first('email') }}</div>
+                            @endif
                         </div>
                         <div class="mb-3">
-                            <input type="password" name="password" placeholder="Create strong password" required class="form-control">
+                            <input type="password" name="password" placeholder="Create strong password" required class="form-control{{ $signupErrors->has('password') ? ' is-invalid' : '' }}">
+                            @if($signupErrors->has('password'))
+                            <div class="invalid-feedback">{{ $signupErrors->first('password') }}</div>
+                            @endif
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Sign Up</button>
                         <p class="text-muted text-center small mt-3 mb-0">
@@ -383,11 +441,26 @@
                         @csrf
                         <h3 class="h4 fw-bold text-primary mb-1">Welcome Back</h3>
                         <p class="text-secondary small mb-3">Sign in to your account</p>
+                        @if($loginErrors->any())
+                        <div class="alert alert-danger mb-3" role="alert">
+                            <ul class="mb-0 ps-3">
+                                @foreach($loginErrors->all() as $error)
+                                <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        @endif
                         <div class="mb-3">
-                            <input type="email" name="email" placeholder="Your Business Email" required class="form-control">
+                            <input type="email" name="email" value="{{ old('email') }}" placeholder="Your Business Email" required class="form-control{{ $loginErrors->has('email') ? ' is-invalid' : '' }}">
+                            @if($loginErrors->has('email'))
+                            <div class="invalid-feedback">{{ $loginErrors->first('email') }}</div>
+                            @endif
                         </div>
                         <div class="mb-3">
-                            <input type="password" name="password" placeholder="Your Password" required class="form-control">
+                            <input type="password" name="password" placeholder="Your Password" required class="form-control{{ $loginErrors->has('password') ? ' is-invalid' : '' }}">
+                            @if($loginErrors->has('password'))
+                            <div class="invalid-feedback">{{ $loginErrors->first('password') }}</div>
+                            @endif
                         </div>
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                         <p class="text-muted text-center small mt-3 mb-0">
@@ -419,8 +492,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            if (window.__SHOW_LOGIN_MODAL__) {
-                showAuthForm('login');
+            if (window.__SHOW_AUTH_MODAL__) {
+                showAuthForm(window.__SHOW_AUTH_MODAL__);
             }
 
             const flashMessage = document.getElementById('flash-message');
