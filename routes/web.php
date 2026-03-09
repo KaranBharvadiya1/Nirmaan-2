@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContractorBidController;
+use App\Http\Controllers\ContractorPortfolioController;
+use App\Http\Controllers\ContractorSettingsController;
 use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\OwnerBidController;
 use App\Http\Controllers\OwnerDashboardController;
@@ -27,6 +29,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::get('/firebase/custom-token', [MessagingController::class, 'issueFirebaseCustomToken'])
     ->middleware('auth')
     ->name('firebase.custom_token');
+
+Route::middleware('auth')
+    ->get('/contractors/{contractor}/portfolio', [ContractorPortfolioController::class, 'showPublicPortfolio'])
+    ->name('contractors.portfolio.show');
 
 Route::middleware(['auth', 'role:Owner'])->prefix('owner')->name('owner.')->group(function (): void {
     Route::get('/dashboard', [OwnerDashboardController::class, 'showDashboard'])->name('dashboard');
@@ -57,5 +63,13 @@ Route::middleware(['auth', 'role:Contractor'])->prefix('contractor')->name('cont
     Route::get('/bids', [ContractorBidController::class, 'showMySubmittedBids'])->name('bids');
     Route::patch('/bids/{bid}/withdraw', [ContractorBidController::class, 'withdrawMyBid'])->name('bids.withdraw');
     Route::get('/awards', [ContractorBidController::class, 'showAwardedProjects'])->name('awards');
+    Route::get('/portfolio', [ContractorPortfolioController::class, 'showPortfolioIndex'])->name('portfolio');
+    Route::get('/portfolio/create', [ContractorPortfolioController::class, 'showCreateForm'])->name('portfolio.create');
+    Route::post('/portfolio', [ContractorPortfolioController::class, 'saveWork'])->name('portfolio.save');
+    Route::get('/portfolio/{workSample}/edit', [ContractorPortfolioController::class, 'showEditForm'])->name('portfolio.edit');
+    Route::put('/portfolio/{workSample}', [ContractorPortfolioController::class, 'saveWorkChanges'])->name('portfolio.update');
+    Route::delete('/portfolio/{workSample}', [ContractorPortfolioController::class, 'deleteWork'])->name('portfolio.delete');
     Route::get('/messages', [MessagingController::class, 'showContractorMessages'])->name('messages');
+    Route::get('/settings', [ContractorSettingsController::class, 'showProfileSettings'])->name('settings');
+    Route::put('/settings', [ContractorSettingsController::class, 'saveProfileSettings'])->name('settings.save');
 });

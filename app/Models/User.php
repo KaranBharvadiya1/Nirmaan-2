@@ -93,4 +93,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(ProjectHire::class, 'contractor_id');
     }
+
+    /**
+     * @return HasMany<ContractorWorkSample, $this>
+     */
+    public function contractorWorkSamples(): HasMany
+    {
+        return $this->hasMany(ContractorWorkSample::class, 'contractor_id');
+    }
 }

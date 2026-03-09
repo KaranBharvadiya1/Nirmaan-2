@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('contractor_work_samples', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('contractor_id')->constrained('users')->cascadeOnDelete();
+            $table->string('title');
+            $table->string('work_category', 120)->nullable();
+            $table->text('description');
+            $table->string('city', 80)->nullable();
+            $table->string('state', 80)->nullable();
+            $table->unsignedSmallInteger('completed_year')->nullable();
+            $table->timestamps();
+
+            $table->index(['contractor_id', 'created_at']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('contractor_work_samples');
+    }
+};

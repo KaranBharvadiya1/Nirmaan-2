@@ -126,7 +126,10 @@
                 </form>
             </div>
             <div class="col-12">
-                <a href="{{ route('owner.projects.details', $hire->project) }}" class="btn btn-outline-secondary btn-sm">Open Project</a>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('owner.projects.details', $hire->project) }}" class="btn btn-outline-secondary btn-sm">Open Project</a>
+                    <a href="{{ route('contractors.portfolio.show', $hire->contractor) }}" class="btn btn-outline-primary btn-sm">View Portfolio</a>
+                </div>
             </div>
         </div>
     </article>

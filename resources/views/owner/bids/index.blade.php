@@ -139,7 +139,10 @@
                             <option value="{{ $statusValue }}" @selected($bid->status === $statusValue)>{{ $statusLabel }}</option>
                             @endforeach
                         </select>
-                        <a href="{{ route('owner.projects.details', $bid->project) }}" class="btn btn-outline-primary btn-sm">Open Project</a>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ route('owner.projects.details', $bid->project) }}" class="btn btn-outline-primary btn-sm">Open Project</a>
+                            <a href="{{ route('contractors.portfolio.show', $bid->contractor) }}" class="btn btn-outline-secondary btn-sm">View Portfolio</a>
+                        </div>
                     </div>
                 </div>
                 @if($bid->cover_message)

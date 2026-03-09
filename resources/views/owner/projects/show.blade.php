@@ -317,6 +317,9 @@
                             @if($bid->cover_message)
                             <p class="small text-secondary mb-0">{{ $bid->cover_message }}</p>
                             @endif
+                            <div class="mt-2">
+                                <a href="{{ route('contractors.portfolio.show', $bid->contractor) }}" class="btn btn-outline-secondary btn-sm">View Portfolio</a>
+                            </div>
                         </div>
                         <div class="d-flex flex-column gap-1">
                             <span class="badge {{ $bidStatusBadgeClass($bid->status) }}" data-bid-status-badge="{{ $bid->id }}">{{ ucfirst($bid->status) }}</span>
@@ -364,7 +367,10 @@
                     <p class="detail-label">Agreed Timeline</p>
                     <p class="detail-value">{{ $project->hire->agreed_timeline_days ? $project->hire->agreed_timeline_days.' days' : 'Not set' }}</p>
                 </div>
-                <a href="{{ route('owner.hires') }}" class="btn btn-outline-primary btn-sm">Open Hires</a>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('owner.hires') }}" class="btn btn-outline-primary btn-sm">Open Hires</a>
+                    <a href="{{ route('contractors.portfolio.show', $project->hire->contractor) }}" class="btn btn-outline-secondary btn-sm">View Portfolio</a>
+                </div>
             </div>
             @endif
 
