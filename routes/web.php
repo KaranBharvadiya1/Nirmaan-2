@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContractorBidController;
+use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\OwnerBidController;
 use App\Http\Controllers\OwnerDashboardController;
 use App\Http\Controllers\OwnerHireController;
@@ -23,6 +24,10 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
+Route::get('/firebase/custom-token', [MessagingController::class, 'issueFirebaseCustomToken'])
+    ->middleware('auth')
+    ->name('firebase.custom_token');
+
 Route::middleware(['auth', 'role:Owner'])->prefix('owner')->name('owner.')->group(function (): void {
     Route::get('/dashboard', [OwnerDashboardController::class, 'showDashboard'])->name('dashboard');
 
@@ -39,6 +44,7 @@ Route::middleware(['auth', 'role:Owner'])->prefix('owner')->name('owner.')->grou
     Route::patch('/bids/{bid}/status', [OwnerBidController::class, 'changeBidStatus'])->name('bids.change_status');
     Route::get('/hires', [OwnerHireController::class, 'showOwnerHires'])->name('hires');
     Route::patch('/hires/{projectHire}/status', [OwnerHireController::class, 'saveOwnerHireStatus'])->name('hires.save_status');
+    Route::get('/messages', [MessagingController::class, 'showOwnerMessages'])->name('messages');
 
     Route::get('/settings', [OwnerSettingsController::class, 'showProfileSettings'])->name('settings');
     Route::put('/settings', [OwnerSettingsController::class, 'saveProfileSettings'])->name('settings.save');
@@ -51,4 +57,5 @@ Route::middleware(['auth', 'role:Contractor'])->prefix('contractor')->name('cont
     Route::get('/bids', [ContractorBidController::class, 'showMySubmittedBids'])->name('bids');
     Route::patch('/bids/{bid}/withdraw', [ContractorBidController::class, 'withdrawMyBid'])->name('bids.withdraw');
     Route::get('/awards', [ContractorBidController::class, 'showAwardedProjects'])->name('awards');
+    Route::get('/messages', [MessagingController::class, 'showContractorMessages'])->name('messages');
 });

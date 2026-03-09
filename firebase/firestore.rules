@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasParticipant(data) {
+      return signedIn()
+        && data != null
+        && data.participants is list
+        && request.auth.uid in data.participants;
+    }
+
+    function conversationData(conversationId) {
+      return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+    }
+
+    function requestHasParticipantList() {
+      return request.resource.data.participants is list
+        && request.auth.uid in request.resource.data.participants;
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if hasParticipant(resource.data);
+
+      allow create: if signedIn()
+        && requestHasParticipantList();
+
+      // Allow update if requester is already a participant OR request keeps requester in participants.
+      allow update: if hasParticipant(resource.data)
+        || (signedIn() && requestHasParticipantList());
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if hasParticipant(conversationData(conversationId));
+
+        allow create: if signedIn()
+          && hasParticipant(conversationData(conversationId))
+          && request.resource.data.sender_uid == request.auth.uid;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

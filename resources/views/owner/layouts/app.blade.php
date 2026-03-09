@@ -192,7 +192,7 @@
             [
                 'title' => 'Communication',
                 'items' => [
-                    ['key' => 'messages', 'icon' => 'bi-chat-left-dots', 'label' => 'Messages', 'url' => '#'],
+                    ['key' => 'messages', 'icon' => 'bi-chat-left-dots', 'label' => 'Messages', 'url' => route('owner.messages')],
                     ['key' => 'settings', 'icon' => 'bi-gear', 'label' => 'Settings', 'url' => route('owner.settings')],
                 ],
             ],

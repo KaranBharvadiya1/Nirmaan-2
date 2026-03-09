@@ -79,6 +79,9 @@
                         <a class="nav-link {{ ($activePage ?? '') === 'awards' ? 'active fw-semibold' : '' }}" href="{{ route('contractor.awards') }}">Awarded</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {{ ($activePage ?? '') === 'messages' ? 'active fw-semibold' : '' }}" href="{{ route('contractor.messages') }}">Messages</a>
+                    </li>
+                    <li class="nav-item">
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="btn btn-outline-secondary btn-sm">
