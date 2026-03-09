@@ -23,6 +23,13 @@ class OwnerBidController extends Controller
             $statusFilter = 'all';
         }
 
+        Bid::query()
+            ->whereHas('project', function ($query) use ($ownerId): void {
+                $query->where('owner_id', $ownerId);
+            })
+            ->whereNull('owner_viewed_at')
+            ->update(['owner_viewed_at' => now()]);
+
         $bidsQuery = Bid::query()
             ->whereHas('project', function ($query) use ($ownerId): void {
                 $query->where('owner_id', $ownerId);
@@ -86,7 +93,10 @@ class OwnerBidController extends Controller
                 if ($autoRejectedBidIds !== []) {
                     Bid::query()
                         ->whereIn('id', $autoRejectedBidIds)
-                        ->update(['status' => 'rejected']);
+                        ->update([
+                            'status' => 'rejected',
+                            'contractor_status_viewed_at' => null,
+                        ]);
                 }
 
                 ProjectHire::query()->updateOrCreate(
@@ -106,8 +116,12 @@ class OwnerBidController extends Controller
                     $bid->project->update(['status' => 'in_progress']);
                 }
             }
-
-            $bid->update(['status' => $nextStatus]);
+            $bid->update([
+                'status' => $nextStatus,
+                'contractor_status_viewed_at' => in_array($nextStatus, ['accepted', 'rejected'], true)
+                    ? null
+                    : now(),
+            ]);
         });
 
         if ($request->expectsJson()) {

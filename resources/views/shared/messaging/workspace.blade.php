@@ -57,6 +57,21 @@
         text-align: center;
     }
 
+    .wa-unread-badge {
+        min-width: 1.3rem;
+        height: 1.3rem;
+        padding: 0 0.35rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffcf6b;
+        color: #0a255a;
+        font-size: 0.68rem;
+        font-weight: 700;
+        margin-left: 0.35rem;
+    }
+
     .wa-search-wrap {
         padding: 0.7rem 0.75rem;
         border-bottom: 1px solid rgba(255, 255, 255, 0.16);
@@ -449,13 +464,14 @@
 
 @push('scripts')
 <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
+    import { getApp, getApps, initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
     import { getAuth, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
     import {
         addDoc,
         collection,
         doc,
         getFirestore,
+        increment,
         onSnapshot,
         orderBy,
         query,
@@ -496,7 +512,12 @@
             ...context,
             last_message_preview: '',
             last_message_at_ms: Number(context.sort_epoch || 0) * 1000,
+            unread_count: 0,
         });
+    }
+
+    function currentUnreadField() {
+        return currentUserMeta.role === 'Owner' ? 'unread_owner_count' : 'unread_contractor_count';
     }
 
     function escapeHtml(value) {
@@ -592,7 +613,8 @@
 
     function renderConversationList() {
         const contexts = filteredConversations();
-        conversationCountBadge.textContent = String(contexts.length);
+        const totalUnreadCount = contexts.reduce((sum, context) => sum + Number(context.unread_count || 0), 0);
+        conversationCountBadge.textContent = String(totalUnreadCount || contexts.length);
 
         if (contexts.length === 0) {
             const message = conversationStateMap.size === 0
@@ -617,9 +639,13 @@
                 : `Bid: ${context.relationship?.status || 'pending'}`;
             const counterpartyName = context.counterparty?.name || 'User';
             const counterpartyImageUrl = String(context.counterparty?.profile_image_url || '').trim();
+            const unreadCount = Number(context.unread_count || 0);
             const avatarHtml = counterpartyImageUrl
                 ? `<img src="${escapeHtml(counterpartyImageUrl)}" alt="${escapeHtml(counterpartyName)}" class="wa-avatar-image">`
                 : `<span class="wa-avatar">${escapeHtml(initialsFromName(counterpartyName))}</span>`;
+            const unreadBadge = unreadCount > 0
+                ? `<span class="wa-unread-badge">${escapeHtml(unreadCount)}</span>`
+                : '';
 
             return `
                 <button type="button" class="wa-conversation-item ${isActive}" data-conversation-id="${escapeHtml(context.conversation_id)}">
@@ -627,7 +653,10 @@
                     <div class="wa-conv-main">
                         <div class="wa-conv-top">
                             <p class="wa-conv-name">${escapeHtml(counterpartyName)}</p>
-                            <span class="wa-conv-time">${escapeHtml(timeLabel)}</span>
+                            <div class="d-inline-flex align-items-center gap-1">
+                                <span class="wa-conv-time">${escapeHtml(timeLabel)}</span>
+                                ${unreadBadge}
+                            </div>
                         </div>
                         <p class="wa-conv-project">${escapeHtml(context.project?.reference_code || '')} | ${escapeHtml(context.project?.title || 'Project')}</p>
                         <p class="wa-conv-preview">${escapeHtml(preview)}</p>
@@ -687,6 +716,25 @@
         }
     }
 
+    async function markConversationRead(context) {
+        if (!db || !context) {
+            return;
+        }
+
+        const conversationRef = doc(db, 'conversations', context.conversation_id);
+        const unreadField = currentUnreadField();
+        const readAtField = currentUserMeta.role === 'Owner' ? 'last_read_owner_at' : 'last_read_contractor_at';
+
+        context.unread_count = 0;
+        conversationStateMap.set(context.conversation_id, context);
+        renderConversationList();
+
+        await setDoc(conversationRef, {
+            [unreadField]: 0,
+            [readAtField]: serverTimestamp(),
+        }, { merge: true });
+    }
+
     function selectConversation(conversationId) {
         const context = conversationStateMap.get(conversationId);
         if (!context || !db) {
@@ -697,6 +745,7 @@
         renderConversationList();
         setChatHeader(context);
         messagingShell.classList.add('wa-mobile-chat-active');
+        markConversationRead(context).catch(() => {});
 
         if (unsubscribeMessages) {
             unsubscribeMessages();
@@ -734,6 +783,7 @@
                 const lastAt = data.last_message_at?.toDate ? data.last_message_at.toDate().getTime() : current.last_message_at_ms;
                 current.last_message_preview = String(data.last_message_preview || current.last_message_preview || '');
                 current.last_message_at_ms = lastAt || current.last_message_at_ms;
+                current.unread_count = Number(data[currentUnreadField()] || 0);
                 conversationStateMap.set(context.conversation_id, current);
                 renderConversationList();
             }, (error) => {
@@ -769,7 +819,10 @@
             relationship_type: context.relationship.type,
             relationship_status: context.relationship.status,
             last_message_preview: messageText.substring(0, 160),
+            last_message_sender_uid: authUserUid,
             last_message_at: serverTimestamp(),
+            unread_owner_count: currentUserMeta.role === 'Owner' ? 0 : increment(1),
+            unread_contractor_count: currentUserMeta.role === 'Contractor' ? 0 : increment(1),
             updated_at: serverTimestamp(),
         }, { merge: true });
 
@@ -820,7 +873,7 @@
                 throw new Error(payload.message || 'Unable to get Firebase auth token.');
             }
 
-            const app = initializeApp(firebaseClientConfig);
+            const app = getApps().length ? getApp() : initializeApp(firebaseClientConfig);
             const auth = getAuth(app);
             await signInWithCustomToken(auth, payload.token);
 

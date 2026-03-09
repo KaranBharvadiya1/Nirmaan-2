@@ -44,6 +44,14 @@ class ContractorBidController extends Controller
             ->where('contractor_id', $contractorId)
             ->first();
 
+        if ($existingBid && in_array($existingBid->status, ['accepted', 'rejected'], true) && ! $existingBid->contractor_status_viewed_at) {
+            $existingBid->forceFill([
+                'contractor_status_viewed_at' => now(),
+            ])->save();
+
+            $existingBid->refresh();
+        }
+
         $project->load([
             'owner:id,first_name,last_name,email',
             'hire:id,project_id,owner_id,contractor_id,bid_id,status',
@@ -107,6 +115,8 @@ class ContractorBidController extends Controller
                 'proposed_timeline_days' => $validated['proposed_timeline_days'] ?? null,
                 'cover_message' => $validated['cover_message'] ?? null,
                 'status' => $nextStatus,
+                'owner_viewed_at' => null,
+                'contractor_status_viewed_at' => now(),
             ],
         );
 
@@ -124,6 +134,12 @@ class ContractorBidController extends Controller
         if (! in_array($statusFilter, $allowedStatuses, true)) {
             $statusFilter = 'all';
         }
+
+        Bid::query()
+            ->where('contractor_id', $contractorId)
+            ->whereIn('status', ['accepted', 'rejected'])
+            ->whereNull('contractor_status_viewed_at')
+            ->update(['contractor_status_viewed_at' => now()]);
 
         $bidsQuery = Bid::query()
             ->where('contractor_id', $contractorId)
@@ -167,7 +183,10 @@ class ContractorBidController extends Controller
             return back()->with('error', 'Cannot withdraw bid after hiring starts.');
         }
 
-        $bid->update(['status' => 'withdrawn']);
+        $bid->update([
+            'status' => 'withdrawn',
+            'owner_viewed_at' => null,
+        ]);
 
         return back()->with('success', 'Bid withdrawn successfully.');
     }

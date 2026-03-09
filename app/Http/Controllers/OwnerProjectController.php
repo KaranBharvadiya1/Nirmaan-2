@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\OwnerStoreProjectRequest;
+use App\Models\Bid;
 use App\Models\Project;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -180,6 +181,11 @@ class OwnerProjectController extends Controller
     public function showProjectDetails(Request $request, Project $project): View
     {
         $this->assertProjectOwnership($request, $project);
+
+        Bid::query()
+            ->where('project_id', $project->id)
+            ->whereNull('owner_viewed_at')
+            ->update(['owner_viewed_at' => now()]);
 
         $project->load([
             'projectDocuments',

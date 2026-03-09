@@ -15,12 +15,16 @@ class Bid extends Model
         'proposed_timeline_days',
         'cover_message',
         'status',
+        'owner_viewed_at',
+        'contractor_status_viewed_at',
     ];
 
     protected function casts(): array
     {
         return [
             'quote_amount' => 'decimal:2',
+            'owner_viewed_at' => 'datetime',
+            'contractor_status_viewed_at' => 'datetime',
         ];
     }
 

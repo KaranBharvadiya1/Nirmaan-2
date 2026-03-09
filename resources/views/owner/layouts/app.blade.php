@@ -120,6 +120,29 @@
             text-align: center;
         }
 
+        .sidebar-link-content {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.7rem;
+            flex: 1;
+        }
+
+        .sidebar-notification-badge {
+            min-width: 1.45rem;
+            height: 1.45rem;
+            padding: 0 0.35rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffcf6b;
+            color: #10264f;
+            font-size: 0.72rem;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(16, 38, 79, 0.18);
+        }
+
         .sidebar-user {
             margin-top: auto;
             border-radius: 1rem;
@@ -177,6 +200,12 @@
         $fullName = trim(($authUser->first_name ?? '').' '.($authUser->last_name ?? ''));
         $initial = strtoupper(substr($authUser->first_name ?? 'O', 0, 1));
         $profileImageUrl = $authUser?->profile_image_url;
+        $menuBadgeCount = static function (string $key) use ($layoutNotificationCounts): int {
+            return match ($key) {
+                'bids' => (int) ($layoutNotificationCounts['bids'] ?? 0),
+                default => 0,
+            };
+        };
 
         $menuSections = [
             [
@@ -242,7 +271,17 @@
                 @foreach ($menuSections as $section)
                 <p class="sidebar-menu-title {{ $loop->first ? 'mt-0' : '' }}">{{ $section['title'] }}</p>
                 @foreach ($section['items'] as $item)
-                <a class="sidebar-link {{ ($activePage ?? '') === $item['key'] ? 'active' : '' }}" href="{{ $item['url'] }}"><i class="bi {{ $item['icon'] }}"></i><span>{{ $item['label'] }}</span></a>
+                @php $badgeCount = $menuBadgeCount($item['key']); @endphp
+                <a class="sidebar-link {{ ($activePage ?? '') === $item['key'] ? 'active' : '' }}" href="{{ $item['url'] }}">
+                    <i class="bi {{ $item['icon'] }}"></i>
+                    <span class="sidebar-link-content">
+                        <span>{{ $item['label'] }}</span>
+                        <span
+                            class="sidebar-notification-badge {{ $badgeCount > 0 ? '' : 'd-none' }}"
+                            @if ($item['key'] === 'messages') data-message-badge @endif
+                        >{{ $badgeCount }}</span>
+                    </span>
+                </a>
                 @endforeach
                 @endforeach
             </nav>
@@ -279,7 +318,17 @@
                 @foreach ($menuSections as $section)
                 <p class="sidebar-menu-title">{{ $section['title'] }}</p>
                 @foreach ($section['items'] as $item)
-                <a class="sidebar-link {{ ($activePage ?? '') === $item['key'] ? 'active' : '' }}" href="{{ $item['url'] }}"><i class="bi {{ $item['icon'] }}"></i><span>{{ $item['label'] }}</span></a>
+                @php $badgeCount = $menuBadgeCount($item['key']); @endphp
+                <a class="sidebar-link {{ ($activePage ?? '') === $item['key'] ? 'active' : '' }}" href="{{ $item['url'] }}">
+                    <i class="bi {{ $item['icon'] }}"></i>
+                    <span class="sidebar-link-content">
+                        <span>{{ $item['label'] }}</span>
+                        <span
+                            class="sidebar-notification-badge {{ $badgeCount > 0 ? '' : 'd-none' }}"
+                            @if ($item['key'] === 'messages') data-message-badge @endif
+                        >{{ $badgeCount }}</span>
+                    </span>
+                </a>
                 @endforeach
                 @endforeach
             </nav>
@@ -620,6 +669,7 @@
             });
         });
     </script>
+    @include('shared.messaging.layout-badge-script')
     @stack('scripts')
 </body>
 </html>
