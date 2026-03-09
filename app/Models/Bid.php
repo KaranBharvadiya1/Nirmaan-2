@@ -19,6 +19,7 @@ class Bid extends Model
         'contractor_status_viewed_at',
     ];
 
+    /** Cast price and read-tracking fields to the correct PHP types. */
     protected function casts(): array
     {
         return [
@@ -29,6 +30,8 @@ class Bid extends Model
     }
 
     /**
+     * Get the project that this bid belongs to.
+     *
      * @return BelongsTo<Project, $this>
      */
     public function project(): BelongsTo
@@ -37,6 +40,8 @@ class Bid extends Model
     }
 
     /**
+     * Get the contractor who submitted this bid.
+     *
      * @return BelongsTo<User, $this>
      */
     public function contractor(): BelongsTo
@@ -45,6 +50,8 @@ class Bid extends Model
     }
 
     /**
+     * Get the hire record created from this bid, if one exists.
+     *
      * @return HasOne<ProjectHire, $this>
      */
     public function projectHire(): HasOne

@@ -41,7 +41,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * Cast persisted auth fields to their runtime PHP representations.
      *
      * @return array<string, string>
      */
@@ -53,6 +53,7 @@ class User extends Authenticatable
         ];
     }
 
+    /** Build a public storage URL for the user's optional profile image. */
     public function getProfileImageUrlAttribute(): ?string
     {
         if (! $this->profile_image_path) {
@@ -63,6 +64,8 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the projects created by this owner account.
+     *
      * @return HasMany<Project, $this>
      */
     public function projects(): HasMany
@@ -71,6 +74,8 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the bids submitted by this contractor account.
+     *
      * @return HasMany<Bid, $this>
      */
     public function bids(): HasMany
@@ -79,6 +84,8 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the hire records owned by this owner account.
+     *
      * @return HasMany<ProjectHire, $this>
      */
     public function ownerProjectHires(): HasMany
@@ -87,6 +94,8 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the hire records awarded to this contractor account.
+     *
      * @return HasMany<ProjectHire, $this>
      */
     public function contractorProjectHires(): HasMany
@@ -95,6 +104,8 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the portfolio work samples created by this contractor account.
+     *
      * @return HasMany<ContractorWorkSample, $this>
      */
     public function contractorWorkSamples(): HasMany

@@ -19,6 +19,7 @@ class ContractorWorkMedia extends Model
         'sort_order',
     ];
 
+    /** Cast media sizing and ordering fields to integers. */
     protected function casts(): array
     {
         return [
@@ -28,6 +29,8 @@ class ContractorWorkMedia extends Model
     }
 
     /**
+     * Get the portfolio work sample that this media belongs to.
+     *
      * @return BelongsTo<ContractorWorkSample, $this>
      */
     public function workSample(): BelongsTo
@@ -35,6 +38,7 @@ class ContractorWorkMedia extends Model
         return $this->belongsTo(ContractorWorkSample::class, 'contractor_work_sample_id');
     }
 
+    /** Build a public storage URL for uploaded image or video media. */
     public function getFileUrlAttribute(): ?string
     {
         if (! $this->file_path) {
@@ -44,6 +48,7 @@ class ContractorWorkMedia extends Model
         return Storage::url($this->file_path);
     }
 
+    /** Convert supported YouTube or Vimeo links into embeddable player URLs. */
     public function getEmbedUrlAttribute(): ?string
     {
         $url = trim((string) $this->external_url);

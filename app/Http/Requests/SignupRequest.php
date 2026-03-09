@@ -9,16 +9,14 @@ class SignupRequest extends FormRequest
 {
     protected $errorBag = 'signup';
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Allow any visitor to submit the signup form. */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate the fields required to create a new owner or contractor account.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */

@@ -7,6 +7,7 @@ use RuntimeException;
 
 class FirebaseCustomTokenFactory
 {
+    /** Build and sign a Firebase custom token for the given Laravel user. */
     public function createTokenForUser(User $user): string
     {
         $clientEmail = (string) config('firebase.client_email', '');
@@ -33,11 +34,13 @@ class FirebaseCustomTokenFactory
         return $this->signJwt($payload, $privateKey);
     }
 
+    /** Return the deterministic Firebase UID for a stored user record. */
     public function firebaseUid(User $user): string
     {
         return $this->firebaseUidFromRoleAndId((string) $user->role, (int) $user->id);
     }
 
+    /** Generate a Firebase-safe UID from the app role and numeric user id. */
     public function firebaseUidFromRoleAndId(string $role, int $userId): string
     {
         $sanitizedRole = strtolower((string) preg_replace('/[^a-z0-9]+/i', '_', $role));
@@ -49,6 +52,7 @@ class FirebaseCustomTokenFactory
         return "nirmaan_{$sanitizedRole}_{$userId}";
     }
 
+    /** Sign a JWT payload with the Firebase service-account private key. */
     private function signJwt(array $payload, string $privateKey): string
     {
         $header = ['alg' => 'RS256', 'typ' => 'JWT'];
@@ -73,11 +77,13 @@ class FirebaseCustomTokenFactory
         return $unsignedToken.'.'.$this->base64UrlEncode($signature);
     }
 
+    /** Encode binary data in URL-safe base64 for JWT segments. */
     private function base64UrlEncode(string $value): string
     {
         return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
     }
 
+    /** Convert escaped newline sequences from env storage into a valid PEM key string. */
     private function normalizePrivateKey(string $privateKey): string
     {
         if ($privateKey === '') {
@@ -87,4 +93,3 @@ class FirebaseCustomTokenFactory
         return str_replace(["\r\n", "\r", '\n'], ["\n", "\n", "\n"], $privateKey);
     }
 }
-

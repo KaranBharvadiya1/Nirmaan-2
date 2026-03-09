@@ -17,6 +17,8 @@ class ProjectDocument extends Model
     ];
 
     /**
+     * Get the project that owns this uploaded document.
+     *
      * @return BelongsTo<Project, $this>
      */
     public function project(): BelongsTo
@@ -24,6 +26,7 @@ class ProjectDocument extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /** Build the public storage URL for the uploaded project document. */
     public function getFileUrlAttribute(): string
     {
         return Storage::url($this->file_path);

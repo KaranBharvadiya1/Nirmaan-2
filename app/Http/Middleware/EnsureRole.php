@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureRole
 {
     /**
-     * Ensure authenticated user has one of the allowed roles.
+     * Ensure the authenticated user belongs to one of the allowed application roles.
      *
      * @param  array<int, string>  $roles
      */
@@ -34,4 +34,3 @@ class EnsureRole
         return $next($request);
     }
 }
-

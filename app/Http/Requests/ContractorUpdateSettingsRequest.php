@@ -8,12 +8,15 @@ use Illuminate\Validation\Rule;
 
 class ContractorUpdateSettingsRequest extends FormRequest
 {
+    /** Limit this settings form to authenticated contractor accounts. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'Contractor';
     }
 
     /**
+     * Validate contractor profile fields, profile image uploads, and password changes.
+     *
      * @return array<string, array<int, \Illuminate\Contracts\Validation\ValidationRule|string>|string>
      */
     public function rules(): array
@@ -35,6 +38,7 @@ class ContractorUpdateSettingsRequest extends FormRequest
         ];
     }
 
+    /** Normalize the basic profile fields before uniqueness and length checks run. */
     protected function prepareForValidation(): void
     {
         $this->merge([

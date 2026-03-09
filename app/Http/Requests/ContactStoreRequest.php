@@ -8,16 +8,14 @@ class ContactStoreRequest extends FormRequest
 {
     protected $errorBag = 'contact';
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Allow any visitor to submit the landing-page contact form. */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate the fields captured by the public contact form.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */

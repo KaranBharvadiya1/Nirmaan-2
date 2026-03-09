@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 
 class ContactController extends Controller
 {
+    /** Persist the landing-page contact form submission and return to the previous page. */
     public function store(ContactStoreRequest $request): RedirectResponse
     {
         ContactInquiry::create($request->validated());

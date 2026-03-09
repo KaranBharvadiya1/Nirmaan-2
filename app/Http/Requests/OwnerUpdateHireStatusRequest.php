@@ -7,16 +7,14 @@ use Illuminate\Validation\Rule;
 
 class OwnerUpdateHireStatusRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Restrict hire status updates to owner accounts. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'Owner';
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate the owner-managed lifecycle states for a project hire.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */

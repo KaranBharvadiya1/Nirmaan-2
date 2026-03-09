@@ -7,16 +7,14 @@ use Illuminate\Validation\Rule;
 
 class OwnerStoreProjectRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Restrict project creation and updates to owner accounts. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'Owner';
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate project scope, site, budget, and supporting document fields.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -55,6 +53,7 @@ class OwnerStoreProjectRequest extends FormRequest
         ];
     }
 
+    /** Trim text-heavy project fields before rule evaluation and persistence. */
     protected function prepareForValidation(): void
     {
         $this->merge([

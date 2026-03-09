@@ -15,6 +15,7 @@ use Illuminate\Validation\Rule;
 
 class OwnerProjectController extends Controller
 {
+    /** List the owner's projects with lightweight filter stats and bid counts. */
     public function showProjects(Request $request): View
     {
         $owner = $request->user();
@@ -35,23 +36,18 @@ class OwnerProjectController extends Controller
         }
 
         $projects = $projectsQuery->paginate(9)->withQueryString();
-
-        $projectStats = [
-            'all' => $owner->projects()->count(),
-            'open' => $owner->projects()->where('status', 'open')->count(),
-            'in_progress' => $owner->projects()->where('status', 'in_progress')->count(),
-            'completed' => $owner->projects()->where('status', 'completed')->count(),
-            'cancelled' => $owner->projects()->where('status', 'cancelled')->count(),
-        ];
+        $projectStats = $this->projectStatsForOwner((int) $owner->id);
 
         return view('owner.projects.index', compact('projects', 'statusFilter', 'projectStats'));
     }
 
+    /** Render the owner form used to create a new construction project. */
     public function showCreateProjectForm(): View
     {
         return view('owner.projects.create');
     }
 
+    /** Store a new project and any uploaded supporting documents for the owner. */
     public function saveProject(OwnerStoreProjectRequest $request): RedirectResponse
     {
         $validated = $request->validated();
@@ -72,6 +68,7 @@ class OwnerProjectController extends Controller
             ->with('clearProjectDraft', true);
     }
 
+    /** Open the edit screen for a project when the owner is allowed to modify it. */
     public function showProjectEditForm(Request $request, Project $project): View|RedirectResponse
     {
         $this->assertProjectOwnership($request, $project);
@@ -87,6 +84,7 @@ class OwnerProjectController extends Controller
         return view('owner.projects.edit', compact('project'));
     }
 
+    /** Persist project field changes and any new supporting documents. */
     public function saveProjectChanges(OwnerStoreProjectRequest $request, Project $project): RedirectResponse
     {
         $this->assertProjectOwnership($request, $project);
@@ -109,6 +107,7 @@ class OwnerProjectController extends Controller
             ->with('success', 'Project updated successfully.');
     }
 
+    /** Update the owner-controlled lifecycle status of a project and its linked hire. */
     public function changeProjectStatus(Request $request, Project $project): JsonResponse|RedirectResponse
     {
         $this->assertProjectOwnership($request, $project);
@@ -161,6 +160,7 @@ class OwnerProjectController extends Controller
             ->with('success', 'Project status updated successfully.');
     }
 
+    /** Delete a project when it is still in a removable state and has no bids. */
     public function deleteProject(Request $request, Project $project): RedirectResponse
     {
         $this->assertProjectOwnership($request, $project);
@@ -178,6 +178,7 @@ class OwnerProjectController extends Controller
             ->with('success', 'Project deleted successfully.');
     }
 
+    /** Show the full owner project detail view, including bids, documents, and hire summary. */
     public function showProjectDetails(Request $request, Project $project): View
     {
         $this->assertProjectOwnership($request, $project);
@@ -192,7 +193,9 @@ class OwnerProjectController extends Controller
             'hire.contractor:id,first_name,last_name,email',
             'hire.bid:id,project_id,contractor_id,quote_amount,proposed_timeline_days,cover_message',
             'bids' => function ($query): void {
-                $query->latest('created_at');
+                // The detail view does not need every bid column, so keep the eager load lean.
+                $query->select('id', 'project_id', 'contractor_id', 'quote_amount', 'proposed_timeline_days', 'cover_message', 'status', 'created_at')
+                    ->latest('created_at');
             },
             'bids.contractor:id,first_name,last_name,email',
         ]);
@@ -200,16 +203,43 @@ class OwnerProjectController extends Controller
         return view('owner.projects.show', compact('project'));
     }
 
+    /** Abort when a project does not belong to the authenticated owner. */
     private function assertProjectOwnership(Request $request, Project $project): void
     {
         abort_unless((int) $project->owner_id === (int) $request->user()->id, 403);
     }
 
+    /**
+     * Feed the filter chips from one grouped query instead of issuing one count per status.
+     *
+     * @return array<string, int>
+     */
+    private function projectStatsForOwner(int $ownerId): array
+    {
+        $statusCounts = Project::query()
+            ->where('owner_id', $ownerId)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->mapWithKeys(static fn ($count, $status): array => [(string) $status => (int) $count])
+            ->all();
+
+        return [
+            'all' => array_sum($statusCounts),
+            'open' => (int) ($statusCounts['open'] ?? 0),
+            'in_progress' => (int) ($statusCounts['in_progress'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0),
+            'cancelled' => (int) ($statusCounts['cancelled'] ?? 0),
+        ];
+    }
+
+    /** Check whether the current project status still allows edits. */
     private function isProjectEditable(Project $project): bool
     {
         return in_array($project->status, ['open', 'cancelled'], true);
     }
 
+    /** Return a consistent validation error response for invalid status transitions. */
     private function projectStatusErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse
     {
         if ($request->expectsJson()) {
@@ -219,6 +249,7 @@ class OwnerProjectController extends Controller
         return back()->with('error', $message);
     }
 
+    /** Check whether the current project can be deleted safely. */
     private function isProjectDeletable(Project $project): bool
     {
         if (! in_array($project->status, ['open', 'cancelled'], true)) {
@@ -229,6 +260,8 @@ class OwnerProjectController extends Controller
     }
 
     /**
+     * Store uploaded project files on the public disk and link them back to the project.
+     *
      * @param  array<int, UploadedFile>|array<empty>  $uploadedDocuments
      */
     private function storeUploadedDocuments(Project $project, array $uploadedDocuments): void
@@ -247,6 +280,7 @@ class OwnerProjectController extends Controller
         }
     }
 
+    /** Generate a short human-readable reference code that remains unique across projects. */
     private function generateProjectReferenceCode(): string
     {
         do {

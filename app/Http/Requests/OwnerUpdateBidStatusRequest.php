@@ -7,16 +7,14 @@ use Illuminate\Validation\Rule;
 
 class OwnerUpdateBidStatusRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Restrict bid status changes to owner accounts. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'Owner';
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate the allowed owner-side bid status transitions.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */

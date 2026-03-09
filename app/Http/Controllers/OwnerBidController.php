@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class OwnerBidController extends Controller
 {
+    /** List the bids received on the owner's projects and clear unread bid notifications. */
     public function showReceivedBids(Request $request): View
     {
         $ownerId = (int) $request->user()->id;
@@ -46,19 +47,12 @@ class OwnerBidController extends Controller
         }
 
         $bids = $bidsQuery->paginate(12)->withQueryString();
-
-        $bidStats = [
-            'all' => $this->countBidsForOwner($ownerId),
-            'pending' => $this->countBidsForOwner($ownerId, 'pending'),
-            'shortlisted' => $this->countBidsForOwner($ownerId, 'shortlisted'),
-            'accepted' => $this->countBidsForOwner($ownerId, 'accepted'),
-            'rejected' => $this->countBidsForOwner($ownerId, 'rejected'),
-            'withdrawn' => $this->countBidsForOwner($ownerId, 'withdrawn'),
-        ];
+        $bidStats = $this->bidStatsForOwner($ownerId);
 
         return view('owner.bids.index', compact('bids', 'statusFilter', 'bidStats'));
     }
 
+    /** Apply an owner bid-status change, including hire creation and auto-rejections when needed. */
     public function changeBidStatus(OwnerUpdateBidStatusRequest $request, Bid $bid): JsonResponse|RedirectResponse
     {
         $bid->loadMissing('project.hire');
@@ -141,6 +135,7 @@ class OwnerBidController extends Controller
         return back()->with('success', 'Bid status updated successfully.');
     }
 
+    /** Return a consistent error response for invalid bid status transitions. */
     private function bidStatusErrorResponse(Request $request, string $message): JsonResponse|RedirectResponse
     {
         if ($request->expectsJson()) {
@@ -150,17 +145,29 @@ class OwnerBidController extends Controller
         return back()->with('error', $message);
     }
 
-    private function countBidsForOwner(int $ownerId, ?string $status = null): int
+    /**
+     * The inbox renders six filter chips, so grouped counts avoid six near-identical queries.
+     *
+     * @return array<string, int>
+     */
+    private function bidStatsForOwner(int $ownerId): array
     {
-        $query = Bid::query()
-            ->whereHas('project', function ($projectQuery) use ($ownerId): void {
-                $projectQuery->where('owner_id', $ownerId);
-            });
+        $statusCounts = Bid::query()
+            ->join('projects', 'projects.id', '=', 'bids.project_id')
+            ->where('projects.owner_id', $ownerId)
+            ->selectRaw('bids.status as status_key, COUNT(bids.id) as aggregate')
+            ->groupBy('bids.status')
+            ->pluck('aggregate', 'status_key')
+            ->mapWithKeys(static fn ($count, $status): array => [(string) $status => (int) $count])
+            ->all();
 
-        if ($status !== null) {
-            $query->where('status', $status);
-        }
-
-        return $query->count();
+        return [
+            'all' => array_sum($statusCounts),
+            'pending' => (int) ($statusCounts['pending'] ?? 0),
+            'shortlisted' => (int) ($statusCounts['shortlisted'] ?? 0),
+            'accepted' => (int) ($statusCounts['accepted'] ?? 0),
+            'rejected' => (int) ($statusCounts['rejected'] ?? 0),
+            'withdrawn' => (int) ($statusCounts['withdrawn'] ?? 0),
+        ];
     }
 }

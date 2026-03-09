@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ContractorPortfolioController extends Controller
 {
+    /** Show the contractor portfolio dashboard with uploaded work samples and media stats. */
     public function showPortfolioIndex(Request $request): View
     {
         $contractor = $request->user();
@@ -24,21 +25,18 @@ class ContractorPortfolioController extends Controller
             ->latest('created_at')
             ->get();
 
-        $portfolioStats = [
-            'samples' => $workSamples->count(),
-            'images' => $workSamples->sum(fn (ContractorWorkSample $sample): int => $sample->media->where('media_type', 'image')->count()),
-            'videos' => $workSamples->sum(fn (ContractorWorkSample $sample): int => $sample->media->where('media_type', 'video')->count()),
-            'external_videos' => $workSamples->sum(fn (ContractorWorkSample $sample): int => $sample->media->where('media_type', 'external_video')->count()),
-        ];
+        $portfolioStats = $this->portfolioStats($workSamples);
 
         return view('contractor.portfolio.index', compact('workSamples', 'portfolioStats'));
     }
 
+    /** Render the contractor form for creating a new portfolio work sample. */
     public function showCreateForm(): View
     {
         return view('contractor.portfolio.create');
     }
 
+    /** Store a new contractor work sample together with its uploaded or external media. */
     public function saveWork(ContractorWorkSampleRequest $request): RedirectResponse
     {
         $validated = $request->validated();
@@ -59,6 +57,7 @@ class ContractorPortfolioController extends Controller
             ->with('success', 'Work sample added successfully.');
     }
 
+    /** Open the edit form for a contractor-owned work sample. */
     public function showEditForm(Request $request, ContractorWorkSample $workSample): View
     {
         $this->assertOwnership($request, $workSample);
@@ -67,6 +66,7 @@ class ContractorPortfolioController extends Controller
         return view('contractor.portfolio.edit', compact('workSample'));
     }
 
+    /** Save edits to an existing work sample, including removals and new media uploads. */
     public function saveWorkChanges(ContractorWorkSampleRequest $request, ContractorWorkSample $workSample): RedirectResponse
     {
         $this->assertOwnership($request, $workSample);
@@ -104,6 +104,7 @@ class ContractorPortfolioController extends Controller
             ->with('success', 'Work sample updated successfully.');
     }
 
+    /** Delete a contractor work sample and all linked media. */
     public function deleteWork(Request $request, ContractorWorkSample $workSample): RedirectResponse
     {
         $this->assertOwnership($request, $workSample);
@@ -114,6 +115,7 @@ class ContractorPortfolioController extends Controller
             ->with('success', 'Work sample deleted successfully.');
     }
 
+    /** Render the owner- or contractor-facing public portfolio page for a contractor. */
     public function showPublicPortfolio(Request $request, User $contractor): View
     {
         abort_unless($contractor->role === 'Contractor', 404);
@@ -127,21 +129,58 @@ class ContractorPortfolioController extends Controller
             ->latest('created_at')
             ->get();
 
-        $portfolioStats = [
-            'samples' => $workSamples->count(),
-            'images' => $workSamples->sum(fn (ContractorWorkSample $sample): int => $sample->media->where('media_type', 'image')->count()),
-            'videos' => $workSamples->sum(fn (ContractorWorkSample $sample): int => $sample->media->whereIn('media_type', ['video', 'external_video'])->count()),
-        ];
+        $portfolioStats = $this->publicPortfolioStats($workSamples);
 
         return view('contractors.show', compact('contractor', 'workSamples', 'portfolioStats'));
     }
 
+    /** Abort when a work sample does not belong to the authenticated contractor. */
     private function assertOwnership(Request $request, ContractorWorkSample $workSample): void
     {
         abort_unless((int) $workSample->contractor_id === (int) $request->user()->id, 403);
     }
 
     /**
+     * The portfolio page already has the media collections in memory, so stats are derived from one flattened pass.
+     *
+     * @param  \Illuminate\Support\Collection<int, ContractorWorkSample>  $workSamples
+     * @return array<string, int>
+     */
+    private function portfolioStats($workSamples): array
+    {
+        $mediaCounts = $workSamples
+            ->pluck('media')
+            ->flatten(1)
+            ->countBy('media_type');
+
+        return [
+            'samples' => $workSamples->count(),
+            'images' => (int) ($mediaCounts['image'] ?? 0),
+            'videos' => (int) ($mediaCounts['video'] ?? 0),
+            'external_videos' => (int) ($mediaCounts['external_video'] ?? 0),
+        ];
+    }
+
+    /**
+     * Public portfolios show uploaded and external videos in the same headline metric.
+     *
+     * @param  \Illuminate\Support\Collection<int, ContractorWorkSample>  $workSamples
+     * @return array<string, int>
+     */
+    private function publicPortfolioStats($workSamples): array
+    {
+        $portfolioStats = $this->portfolioStats($workSamples);
+
+        return [
+            'samples' => $portfolioStats['samples'],
+            'images' => $portfolioStats['images'],
+            'videos' => $portfolioStats['videos'] + $portfolioStats['external_videos'],
+        ];
+    }
+
+    /**
+     * Store newly uploaded portfolio media and external video links for a work sample.
+     *
      * @param  array<int, UploadedFile>|array<empty>  $uploadedMedia
      * @param  array<int, string>  $externalVideoLinks
      */

@@ -18,6 +18,7 @@ class ProjectHire extends Model
         'status',
     ];
 
+    /** Cast hire amount and hire timestamp fields to their runtime types. */
     protected function casts(): array
     {
         return [
@@ -27,6 +28,8 @@ class ProjectHire extends Model
     }
 
     /**
+     * Get the project that this hire belongs to.
+     *
      * @return BelongsTo<Project, $this>
      */
     public function project(): BelongsTo
@@ -35,6 +38,8 @@ class ProjectHire extends Model
     }
 
     /**
+     * Get the owner who created this hire.
+     *
      * @return BelongsTo<User, $this>
      */
     public function owner(): BelongsTo
@@ -43,6 +48,8 @@ class ProjectHire extends Model
     }
 
     /**
+     * Get the contractor awarded by this hire.
+     *
      * @return BelongsTo<User, $this>
      */
     public function contractor(): BelongsTo
@@ -51,6 +58,8 @@ class ProjectHire extends Model
     }
 
     /**
+     * Get the bid record that produced this hire.
+     *
      * @return BelongsTo<Bid, $this>
      */
     public function bid(): BelongsTo

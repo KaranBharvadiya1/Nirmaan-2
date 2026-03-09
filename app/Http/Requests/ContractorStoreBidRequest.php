@@ -7,9 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ContractorStoreBidRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Ensure only contractors can bid and never on their own projects. */
     public function authorize(): bool
     {
         $user = $this->user();
@@ -23,7 +21,7 @@ class ContractorStoreBidRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate the commercial and delivery fields required for a bid submission.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
@@ -36,6 +34,7 @@ class ContractorStoreBidRequest extends FormRequest
         ];
     }
 
+    /** Trim free-text input before the bid rules are evaluated. */
     protected function prepareForValidation(): void
     {
         $this->merge([

@@ -9,11 +9,13 @@ use Illuminate\View\View;
 
 class OwnerSettingsController extends Controller
 {
+    /** Render the owner profile settings screen. */
     public function showProfileSettings(): View
     {
         return view('owner.settings');
     }
 
+    /** Save owner profile details, profile image, and optional password changes. */
     public function saveProfileSettings(OwnerUpdateSettingsRequest $request): RedirectResponse
     {
         $user = $request->user();

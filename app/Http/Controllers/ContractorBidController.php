@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 
 class ContractorBidController extends Controller
 {
+    /** List public projects a contractor can bid on and preload any bid already submitted by them. */
     public function showAvailableProjectsForBidding(Request $request): View
     {
         $contractorId = (int) $request->user()->id;
@@ -26,7 +27,8 @@ class ContractorBidController extends Controller
             ->with([
                 'owner:id,first_name,last_name,email',
                 'bids' => function ($query) use ($contractorId): void {
-                    $query->where('contractor_id', $contractorId);
+                    $query->select('id', 'project_id', 'contractor_id', 'quote_amount', 'status')
+                        ->where('contractor_id', $contractorId);
                 },
             ])
             ->latest('created_at')
@@ -35,6 +37,7 @@ class ContractorBidController extends Controller
         return view('contractor.projects.index', compact('projects'));
     }
 
+    /** Show the contractor-facing project detail and existing bid state for a single project. */
     public function showProjectBidForm(Request $request, Project $project): View
     {
         $contractorId = (int) $request->user()->id;
@@ -85,6 +88,7 @@ class ContractorBidController extends Controller
         ));
     }
 
+    /** Create or update the contractor's bid for the selected project. */
     public function submitProjectBid(ContractorStoreBidRequest $request, Project $project): RedirectResponse
     {
         $contractorId = (int) $request->user()->id;
@@ -125,6 +129,7 @@ class ContractorBidController extends Controller
             ->with('success', $existingBid ? 'Bid updated successfully.' : 'Bid submitted successfully.');
     }
 
+    /** List the contractor's submitted bids and clear unread bid-decision notifications. */
     public function showMySubmittedBids(Request $request): View
     {
         $contractorId = (int) $request->user()->id;
@@ -155,18 +160,12 @@ class ContractorBidController extends Controller
         }
 
         $bids = $bidsQuery->paginate(12)->withQueryString();
-        $bidStats = [
-            'all' => $this->countContractorBids($contractorId),
-            'pending' => $this->countContractorBids($contractorId, 'pending'),
-            'shortlisted' => $this->countContractorBids($contractorId, 'shortlisted'),
-            'accepted' => $this->countContractorBids($contractorId, 'accepted'),
-            'rejected' => $this->countContractorBids($contractorId, 'rejected'),
-            'withdrawn' => $this->countContractorBids($contractorId, 'withdrawn'),
-        ];
+        $bidStats = $this->bidStatsForContractor($contractorId);
 
         return view('contractor.bids.index', compact('bids', 'statusFilter', 'bidStats'));
     }
 
+    /** Allow the contractor to withdraw a still-pending or shortlisted bid. */
     public function withdrawMyBid(Request $request, Bid $bid): RedirectResponse
     {
         $contractorId = (int) $request->user()->id;
@@ -191,6 +190,7 @@ class ContractorBidController extends Controller
         return back()->with('success', 'Bid withdrawn successfully.');
     }
 
+    /** List projects awarded to the contractor with lightweight status counters. */
     public function showAwardedProjects(Request $request): View
     {
         $contractorId = (int) $request->user()->id;
@@ -215,35 +215,56 @@ class ContractorBidController extends Controller
         }
 
         $hires = $hiresQuery->paginate(12)->withQueryString();
-        $hireStats = [
-            'all' => $this->countContractorHires($contractorId),
-            'active' => $this->countContractorHires($contractorId, 'active'),
-            'completed' => $this->countContractorHires($contractorId, 'completed'),
-            'cancelled' => $this->countContractorHires($contractorId, 'cancelled'),
-        ];
+        $hireStats = $this->hireStatsForContractor($contractorId);
 
         return view('contractor.awards.index', compact('hires', 'statusFilter', 'hireStats'));
     }
 
-    private function countContractorBids(int $contractorId, ?string $status = null): int
+    /**
+     * Reuse grouped bid counts for the contractor bid filters instead of repeating one query per tab.
+     *
+     * @return array<string, int>
+     */
+    private function bidStatsForContractor(int $contractorId): array
     {
-        $query = Bid::query()->where('contractor_id', $contractorId);
+        $statusCounts = Bid::query()
+            ->where('contractor_id', $contractorId)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->mapWithKeys(static fn ($count, $status): array => [(string) $status => (int) $count])
+            ->all();
 
-        if ($status !== null) {
-            $query->where('status', $status);
-        }
-
-        return $query->count();
+        return [
+            'all' => array_sum($statusCounts),
+            'pending' => (int) ($statusCounts['pending'] ?? 0),
+            'shortlisted' => (int) ($statusCounts['shortlisted'] ?? 0),
+            'accepted' => (int) ($statusCounts['accepted'] ?? 0),
+            'rejected' => (int) ($statusCounts['rejected'] ?? 0),
+            'withdrawn' => (int) ($statusCounts['withdrawn'] ?? 0),
+        ];
     }
 
-    private function countContractorHires(int $contractorId, ?string $status = null): int
+    /**
+     * Awarded-project filters follow the same grouped-count pattern to keep the page query count stable.
+     *
+     * @return array<string, int>
+     */
+    private function hireStatsForContractor(int $contractorId): array
     {
-        $query = ProjectHire::query()->where('contractor_id', $contractorId);
+        $statusCounts = ProjectHire::query()
+            ->where('contractor_id', $contractorId)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->mapWithKeys(static fn ($count, $status): array => [(string) $status => (int) $count])
+            ->all();
 
-        if ($status !== null) {
-            $query->where('status', $status);
-        }
-
-        return $query->count();
+        return [
+            'all' => array_sum($statusCounts),
+            'active' => (int) ($statusCounts['active'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0),
+            'cancelled' => (int) ($statusCounts['cancelled'] ?? 0),
+        ];
     }
 }

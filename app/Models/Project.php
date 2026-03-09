@@ -39,6 +39,7 @@ class Project extends Model
         'quality_expectations',
     ];
 
+    /** Cast budget and schedule fields to richer runtime types. */
     protected function casts(): array
     {
         return [
@@ -49,6 +50,7 @@ class Project extends Model
         ];
     }
 
+    /** Remove public project documents when the parent project is deleted. */
     protected static function booted(): void
     {
         static::deleting(function (Project $project): void {
@@ -67,6 +69,8 @@ class Project extends Model
     }
 
     /**
+     * Get the owner who posted this project.
+     *
      * @return BelongsTo<User, $this>
      */
     public function owner(): BelongsTo
@@ -75,6 +79,8 @@ class Project extends Model
     }
 
     /**
+     * Get all bids submitted against this project.
+     *
      * @return HasMany<Bid, $this>
      */
     public function bids(): HasMany
@@ -83,6 +89,8 @@ class Project extends Model
     }
 
     /**
+     * Get the uploaded documents attached to this project.
+     *
      * @return HasMany<ProjectDocument, $this>
      */
     public function projectDocuments(): HasMany
@@ -91,6 +99,8 @@ class Project extends Model
     }
 
     /**
+     * Get the active or historical hire created from this project.
+     *
      * @return HasOne<ProjectHire, $this>
      */
     public function hire(): HasOne

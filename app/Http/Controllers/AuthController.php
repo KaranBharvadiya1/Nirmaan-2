@@ -13,6 +13,7 @@ use Laravel\Sanctum\NewAccessToken;
 
 class AuthController extends Controller
 {
+    /** Redirect the dedicated signup route back to the landing page with the signup modal opened. */
     public function showSignupForm(): RedirectResponse
     {
         return redirect()
@@ -20,6 +21,7 @@ class AuthController extends Controller
             ->with('showSignup', true);
     }
 
+    /** Redirect the dedicated login route back to the landing page with the login modal opened. */
     public function showLoginForm(): RedirectResponse
     {
         return redirect()
@@ -27,6 +29,7 @@ class AuthController extends Controller
             ->with('showLogin', true);
     }
 
+    /** Create a new user account and return either a web redirect or an API token response. */
     public function signup(SignupRequest $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validated();
@@ -54,6 +57,7 @@ class AuthController extends Controller
             ->with('success', 'Account created successfully. You are now logged in.');
     }
 
+    /** Authenticate an existing user and answer with the correct web or API flow. */
     public function login(LoginRequest $request): RedirectResponse|JsonResponse
     {
         $credentials = $request->validated();
@@ -91,6 +95,7 @@ class AuthController extends Controller
             ->with('success', 'Logged in successfully.');
     }
 
+    /** Return the authenticated API user's profile and token abilities. */
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -107,6 +112,7 @@ class AuthController extends Controller
         ]);
     }
 
+    /** Log the user out of the current session or revoke the active API token. */
     public function logout(Request $request): RedirectResponse|JsonResponse
     {
         if ($this->isApiRequest($request)) {
@@ -127,6 +133,7 @@ class AuthController extends Controller
             ->with('success', 'You have been logged out.');
     }
 
+    /** Create a Sanctum token that matches the signed-in user's role. */
     private function createRoleToken(User $user): NewAccessToken
     {
         return $user->createToken('auth_token', $this->abilitiesForRole($user->role));
@@ -146,6 +153,7 @@ class AuthController extends Controller
         };
     }
 
+    /** Build the standard JSON payload used by API auth responses. */
     private function tokenResponse(User $user, NewAccessToken $token, int $status, string $message): JsonResponse
     {
         return response()->json([
@@ -163,11 +171,13 @@ class AuthController extends Controller
         ], $status);
     }
 
+    /** Detect whether the current request expects an API-style response. */
     private function isApiRequest(Request $request): bool
     {
         return $request->expectsJson() || $request->is('api/*');
     }
 
+    /** Map each role to the dashboard or landing route it should see after login. */
     private function webLandingRouteForRole(string $role): string
     {
         return match ($role) {

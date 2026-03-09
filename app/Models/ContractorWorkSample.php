@@ -19,6 +19,7 @@ class ContractorWorkSample extends Model
         'completed_year',
     ];
 
+    /** Cast numeric portfolio metadata to the correct PHP types. */
     protected function casts(): array
     {
         return [
@@ -26,6 +27,7 @@ class ContractorWorkSample extends Model
         ];
     }
 
+    /** Remove uploaded portfolio media whenever the parent work sample is deleted. */
     protected static function booted(): void
     {
         static::deleting(function (ContractorWorkSample $workSample): void {
@@ -44,6 +46,8 @@ class ContractorWorkSample extends Model
     }
 
     /**
+     * Get the contractor who owns this portfolio work sample.
+     *
      * @return BelongsTo<User, $this>
      */
     public function contractor(): BelongsTo
@@ -52,6 +56,8 @@ class ContractorWorkSample extends Model
     }
 
     /**
+     * Get the ordered media items attached to this work sample.
+     *
      * @return HasMany<ContractorWorkMedia, $this>
      */
     public function media(): HasMany

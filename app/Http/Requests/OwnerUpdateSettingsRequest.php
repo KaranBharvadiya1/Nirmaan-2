@@ -8,12 +8,15 @@ use Illuminate\Validation\Rule;
 
 class OwnerUpdateSettingsRequest extends FormRequest
 {
+    /** Limit this settings form to authenticated owner accounts. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'Owner';
     }
 
     /**
+     * Validate owner profile fields, profile image uploads, and password changes.
+     *
      * @return array<string, array<int, \Illuminate\Contracts\Validation\ValidationRule|string>|string>
      */
     public function rules(): array
@@ -35,6 +38,7 @@ class OwnerUpdateSettingsRequest extends FormRequest
         ];
     }
 
+    /** Normalize the basic profile fields before uniqueness and length checks run. */
     protected function prepareForValidation(): void
     {
         $this->merge([

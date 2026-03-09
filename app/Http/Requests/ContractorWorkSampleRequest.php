@@ -6,12 +6,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ContractorWorkSampleRequest extends FormRequest
 {
+    /** Allow only contractors to create or update portfolio work samples. */
     public function authorize(): bool
     {
         return $this->user()?->role === 'Contractor';
     }
 
     /**
+     * Validate portfolio content, uploaded media, and external video links.
+     *
      * @return array<string, array<int, string>|string>
      */
     public function rules(): array
@@ -34,6 +37,7 @@ class ContractorWorkSampleRequest extends FormRequest
         ];
     }
 
+    /** Trim content fields and remove blank external video entries before validation. */
     protected function prepareForValidation(): void
     {
         $externalLinks = array_map(

@@ -15,6 +15,7 @@ use Illuminate\Validation\Rule;
 
 class MessagingController extends Controller
 {
+    /** Render the owner messaging workspace with all eligible bid and hire conversations. */
     public function showOwnerMessages(Request $request, FirebaseCustomTokenFactory $tokenFactory): View
     {
         $user = $request->user();
@@ -30,6 +31,7 @@ class MessagingController extends Controller
         ]);
     }
 
+    /** Render the contractor messaging workspace with all eligible bid and hire conversations. */
     public function showContractorMessages(Request $request, FirebaseCustomTokenFactory $tokenFactory): View
     {
         $user = $request->user();
@@ -45,6 +47,7 @@ class MessagingController extends Controller
         ]);
     }
 
+    /** Upload chat media for a conversation after confirming that the user can access that thread. */
     public function uploadChatAttachments(Request $request, FirebaseCustomTokenFactory $tokenFactory): JsonResponse
     {
         $user = $request->user();
@@ -90,6 +93,7 @@ class MessagingController extends Controller
         ]);
     }
 
+    /** Issue a Firebase custom token that lets the current user join realtime chat safely. */
     public function issueFirebaseCustomToken(Request $request, FirebaseCustomTokenFactory $tokenFactory): JsonResponse
     {
         $user = $request->user();
@@ -122,6 +126,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Build owner-visible messaging threads from project bids and awarded hires.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function buildOwnerConversationContexts(int $ownerId, FirebaseCustomTokenFactory $tokenFactory): array
@@ -200,6 +206,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Build contractor-visible messaging threads from submitted bids and awarded projects.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function buildContractorConversationContexts(int $contractorId, FirebaseCustomTokenFactory $tokenFactory): array
@@ -276,6 +284,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Resolve the correct conversation builder for the current authenticated role.
+     *
      * @return array<int, array<string, mixed>>
      */
     private function buildConversationContextsForUser(User $user, FirebaseCustomTokenFactory $tokenFactory): array
@@ -288,6 +298,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Merge conversation contexts so a bid thread can later upgrade to a hire thread cleanly.
+     *
      * @param  array<string, array<string, mixed>>  $conversationMap
      * @param  array<string, mixed>  $context
      */
@@ -323,6 +335,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Return conversation contexts sorted from newest activity to oldest.
+     *
      * @param  array<string, array<string, mixed>>  $conversationMap
      * @return array<int, array<string, mixed>>
      */
@@ -338,6 +352,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Package the shared conversation metadata used by the realtime chat UI.
+     *
      * @return array<string, mixed>
      */
     private function buildConversationContext(
@@ -389,6 +405,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Return the current Laravel user's identity payload expected by the messaging frontend.
+     *
      * @return array<string, mixed>
      */
     private function buildCurrentUserMeta(User $user, FirebaseCustomTokenFactory $tokenFactory): array
@@ -403,6 +421,8 @@ class MessagingController extends Controller
     }
 
     /**
+     * Expose the Firebase client configuration needed by the browser SDK.
+     *
      * @return array<string, string|null>
      */
     private function firebaseClientConfig(): array
@@ -418,12 +438,14 @@ class MessagingController extends Controller
         ];
     }
 
+    /** Check whether the server-side Firebase service-account credentials are available. */
     private function firebaseServerReady(): bool
     {
         return (string) config('firebase.client_email', '') !== ''
             && (string) config('firebase.private_key', '') !== '';
     }
 
+    /** Build a stable display name for the UI from first name, name, or email fallback. */
     private function displayName(User $user): string
     {
         $fullName = trim((string) $user->first_name.' '.(string) $user->last_name);
@@ -439,6 +461,7 @@ class MessagingController extends Controller
         return (string) $user->email;
     }
 
+    /** Normalize uploaded chat media MIME types when browsers send a generic octet-stream value. */
     private function chatAttachmentMimeType(UploadedFile $file): string
     {
         $detectedMimeType = (string) ($file->getMimeType() ?: $file->getClientMimeType());
@@ -458,6 +481,7 @@ class MessagingController extends Controller
         };
     }
 
+    /** Classify chat uploads into image or video buckets for frontend rendering. */
     private function chatAttachmentMediaType(UploadedFile $file, string $mimeType): string
     {
         if (str_starts_with($mimeType, 'video/')) {
@@ -469,6 +493,7 @@ class MessagingController extends Controller
             : 'image';
     }
 
+    /** Generate a deterministic conversation id from the project and participant ids. */
     private function conversationId(int $projectId, int $ownerUserId, int $contractorUserId): string
     {
         return "project_{$projectId}_owner_{$ownerUserId}_contractor_{$contractorUserId}";

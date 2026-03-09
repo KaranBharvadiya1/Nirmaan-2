@@ -8,16 +8,14 @@ class LoginRequest extends FormRequest
 {
     protected $errorBag = 'login';
 
-    /**
-     * Determine if the user is authorized to make this request.
-     */
+    /** Allow any visitor to attempt a login. */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Validate the credentials required by the login flow.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */

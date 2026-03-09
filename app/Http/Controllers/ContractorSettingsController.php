@@ -9,11 +9,13 @@ use Illuminate\View\View;
 
 class ContractorSettingsController extends Controller
 {
+    /** Render the contractor profile settings screen. */
     public function showProfileSettings(): View
     {
         return view('contractor.settings');
     }
 
+    /** Save contractor profile details, profile image, and optional password changes. */
     public function saveProfileSettings(ContractorUpdateSettingsRequest $request): RedirectResponse
     {
         $user = $request->user();

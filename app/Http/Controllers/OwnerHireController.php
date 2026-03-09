@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 
 class OwnerHireController extends Controller
 {
+    /** List the owner's hires with status filters and grouped hire counters. */
     public function showOwnerHires(Request $request): View
     {
         $ownerId = (int) $request->user()->id;
@@ -34,16 +35,12 @@ class OwnerHireController extends Controller
         }
 
         $hires = $hiresQuery->paginate(12)->withQueryString();
-        $hireStats = [
-            'all' => $this->countOwnerHires($ownerId),
-            'active' => $this->countOwnerHires($ownerId, 'active'),
-            'completed' => $this->countOwnerHires($ownerId, 'completed'),
-            'cancelled' => $this->countOwnerHires($ownerId, 'cancelled'),
-        ];
+        $hireStats = $this->hireStatsForOwner($ownerId);
 
         return view('owner.hires.index', compact('hires', 'statusFilter', 'hireStats'));
     }
 
+    /** Persist an owner-selected hire status and mirror it back to the linked project. */
     public function saveOwnerHireStatus(OwnerUpdateHireStatusRequest $request, ProjectHire $projectHire): RedirectResponse
     {
         abort_unless((int) $projectHire->owner_id === (int) $request->user()->id, 403);
@@ -65,14 +62,26 @@ class OwnerHireController extends Controller
         return back()->with('success', 'Hire status updated successfully.');
     }
 
-    private function countOwnerHires(int $ownerId, ?string $status = null): int
+    /**
+     * Collapse hire filter counts into a single grouped query.
+     *
+     * @return array<string, int>
+     */
+    private function hireStatsForOwner(int $ownerId): array
     {
-        $query = ProjectHire::query()->where('owner_id', $ownerId);
+        $statusCounts = ProjectHire::query()
+            ->where('owner_id', $ownerId)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status')
+            ->mapWithKeys(static fn ($count, $status): array => [(string) $status => (int) $count])
+            ->all();
 
-        if ($status !== null) {
-            $query->where('status', $status);
-        }
-
-        return $query->count();
+        return [
+            'all' => array_sum($statusCounts),
+            'active' => (int) ($statusCounts['active'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0),
+            'cancelled' => (int) ($statusCounts['cancelled'] ?? 0),
+        ];
     }
 }
