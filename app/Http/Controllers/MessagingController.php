@@ -9,6 +9,9 @@ use App\Support\FirebaseCustomTokenFactory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class MessagingController extends Controller
 {
@@ -18,10 +21,11 @@ class MessagingController extends Controller
         abort_unless($user && $user->role === 'Owner', 403);
 
         return view('owner.messages.index', [
-            'conversationContexts' => $this->buildOwnerConversationContexts((int) $user->id, $tokenFactory),
+            'conversationContexts' => $this->buildConversationContextsForUser($user, $tokenFactory),
             'firebaseClientConfig' => $this->firebaseClientConfig(),
             'firebaseServerReady' => $this->firebaseServerReady(),
             'firebaseTokenEndpoint' => route('firebase.custom_token'),
+            'chatAttachmentUploadEndpoint' => route('messages.attachments'),
             'currentUserMeta' => $this->buildCurrentUserMeta($user, $tokenFactory),
         ]);
     }
@@ -32,11 +36,57 @@ class MessagingController extends Controller
         abort_unless($user && $user->role === 'Contractor', 403);
 
         return view('contractor.messages.index', [
-            'conversationContexts' => $this->buildContractorConversationContexts((int) $user->id, $tokenFactory),
+            'conversationContexts' => $this->buildConversationContextsForUser($user, $tokenFactory),
             'firebaseClientConfig' => $this->firebaseClientConfig(),
             'firebaseServerReady' => $this->firebaseServerReady(),
             'firebaseTokenEndpoint' => route('firebase.custom_token'),
+            'chatAttachmentUploadEndpoint' => route('messages.attachments'),
             'currentUserMeta' => $this->buildCurrentUserMeta($user, $tokenFactory),
+        ]);
+    }
+
+    public function uploadChatAttachments(Request $request, FirebaseCustomTokenFactory $tokenFactory): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user && in_array($user->role, ['Owner', 'Contractor'], true), 403);
+
+        $accessibleConversationIds = collect($this->buildConversationContextsForUser($user, $tokenFactory))
+            ->pluck('conversation_id')
+            ->values()
+            ->all();
+
+        $validated = $request->validate([
+            'conversation_id' => ['required', 'string', Rule::in($accessibleConversationIds)],
+            'attachments' => ['required', 'array', 'min:1', 'max:5'],
+            'attachments.*' => [
+                'required',
+                'file',
+                'max:25600',
+                'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime',
+            ],
+        ]);
+
+        $storedAttachments = collect($request->file('attachments', []))
+            ->filter(static fn ($file): bool => $file instanceof UploadedFile)
+            ->map(function (UploadedFile $file) use ($validated): array {
+                $mimeType = $this->chatAttachmentMimeType($file);
+                $mediaType = $this->chatAttachmentMediaType($file, $mimeType);
+                $storedPath = $file->store('chat-attachments/'.$validated['conversation_id'], 'public');
+
+                return [
+                    'media_type' => $mediaType,
+                    'url' => Storage::url($storedPath),
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $mimeType,
+                    'file_size' => (int) $file->getSize(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return response()->json([
+            'message' => 'Attachments uploaded successfully.',
+            'attachments' => $storedAttachments,
         ]);
     }
 
@@ -226,6 +276,18 @@ class MessagingController extends Controller
     }
 
     /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildConversationContextsForUser(User $user, FirebaseCustomTokenFactory $tokenFactory): array
+    {
+        return match ((string) $user->role) {
+            'Owner' => $this->buildOwnerConversationContexts((int) $user->id, $tokenFactory),
+            'Contractor' => $this->buildContractorConversationContexts((int) $user->id, $tokenFactory),
+            default => [],
+        };
+    }
+
+    /**
      * @param  array<string, array<string, mixed>>  $conversationMap
      * @param  array<string, mixed>  $context
      */
@@ -375,6 +437,36 @@ class MessagingController extends Controller
         }
 
         return (string) $user->email;
+    }
+
+    private function chatAttachmentMimeType(UploadedFile $file): string
+    {
+        $detectedMimeType = (string) ($file->getMimeType() ?: $file->getClientMimeType());
+        if ($detectedMimeType !== '' && $detectedMimeType !== 'application/octet-stream') {
+            return $detectedMimeType;
+        }
+
+        return match (strtolower((string) $file->getClientOriginalExtension())) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov' => 'video/quicktime',
+            default => $detectedMimeType ?: 'application/octet-stream',
+        };
+    }
+
+    private function chatAttachmentMediaType(UploadedFile $file, string $mimeType): string
+    {
+        if (str_starts_with($mimeType, 'video/')) {
+            return 'video';
+        }
+
+        return in_array(strtolower((string) $file->getClientOriginalExtension()), ['mp4', 'webm', 'mov'], true)
+            ? 'video'
+            : 'image';
     }
 
     private function conversationId(int $projectId, int $ownerUserId, int $contractorUserId): string

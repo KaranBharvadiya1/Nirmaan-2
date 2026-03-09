@@ -30,6 +30,10 @@ Route::get('/firebase/custom-token', [MessagingController::class, 'issueFirebase
     ->middleware('auth')
     ->name('firebase.custom_token');
 
+Route::post('/messages/attachments', [MessagingController::class, 'uploadChatAttachments'])
+    ->middleware('auth')
+    ->name('messages.attachments');
+
 Route::middleware('auth')
     ->get('/contractors/{contractor}/portfolio', [ContractorPortfolioController::class, 'showPublicPortfolio'])
     ->name('contractors.portfolio.show');

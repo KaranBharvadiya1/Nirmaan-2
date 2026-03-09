@@ -250,8 +250,9 @@
 
     .wa-bubble {
         display: inline-flex;
-        align-items: flex-end;
-        gap: 0.34rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.38rem;
         width: fit-content;
         max-width: min(58%, 460px);
         border-radius: 0.45rem;
@@ -277,11 +278,53 @@
     }
 
     .wa-msg-text {
-        display: inline;
+        display: block;
         white-space: pre-wrap;
         word-break: break-word;
         line-height: 1.22;
         margin: 0;
+    }
+
+    .wa-message-footer {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .wa-message-attachments {
+        display: grid;
+        gap: 0.4rem;
+    }
+
+    .wa-message-attachment-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.28rem;
+    }
+
+    .wa-message-attachment-link {
+        display: block;
+        text-decoration: none;
+    }
+
+    .wa-message-image,
+    .wa-message-video {
+        display: block;
+        width: min(100%, 260px);
+        max-height: 260px;
+        border-radius: 0.8rem;
+        background: #dfe7f7;
+        object-fit: cover;
+    }
+
+    .wa-message-video {
+        object-fit: contain;
+    }
+
+    .wa-message-attachment-name {
+        font-size: 0.72rem;
+        color: #5d6a85;
+        text-decoration: none;
+        word-break: break-word;
     }
 
     .wa-time {
@@ -329,7 +372,97 @@
     .wa-composer-form {
         display: flex;
         gap: 0.55rem;
+        align-items: flex-end;
+    }
+
+    .wa-input-wrap {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .wa-composer-row {
+        display: flex;
+        gap: 0.55rem;
         align-items: center;
+    }
+
+    .wa-attach-btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border: 1px solid #c7d5f4;
+        background: #fff;
+        color: #2452e6;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .wa-attach-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .wa-attachment-preview-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-bottom: 0.55rem;
+    }
+
+    .wa-attachment-preview-card {
+        width: 86px;
+        border-radius: 0.9rem;
+        background: #fff;
+        border: 1px solid #d7e3fb;
+        box-shadow: 0 8px 18px rgba(36, 82, 230, 0.08);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .wa-attachment-preview-thumb {
+        width: 100%;
+        height: 68px;
+        object-fit: cover;
+        display: block;
+        background: #e9eef9;
+    }
+
+    .wa-attachment-preview-meta {
+        padding: 0.35rem 0.45rem 0.4rem;
+    }
+
+    .wa-attachment-preview-name {
+        margin: 0;
+        font-size: 0.68rem;
+        font-weight: 600;
+        color: #203355;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wa-attachment-preview-size {
+        margin: 0.12rem 0 0;
+        font-size: 0.62rem;
+        color: #63708c;
+    }
+
+    .wa-attachment-remove {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 0;
+        background: rgba(15, 23, 42, 0.72);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.72rem;
     }
 
     .wa-input {
@@ -445,13 +578,29 @@
             <footer class="wa-composer">
                 <form class="wa-composer-form" id="chatComposerForm">
                     <input
-                        id="chatComposerInput"
-                        type="text"
-                        class="form-control wa-input"
-                        placeholder="Type a message"
-                        maxlength="2000"
+                        id="chatAttachmentInput"
+                        type="file"
+                        class="d-none"
+                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                        multiple
                         disabled
                     >
+                    <div class="wa-input-wrap">
+                        <div class="wa-attachment-preview-list d-none" id="chatAttachmentPreviewList"></div>
+                        <div class="wa-composer-row">
+                            <button type="button" class="wa-attach-btn" id="chatAttachmentButton" disabled aria-label="Add images or videos">
+                                <i class="bi bi-paperclip"></i>
+                            </button>
+                            <input
+                                id="chatComposerInput"
+                                type="text"
+                                class="form-control wa-input"
+                                placeholder="Type a message or send media"
+                                maxlength="2000"
+                                disabled
+                            >
+                        </div>
+                    </div>
                     <button type="submit" class="wa-send-btn" id="chatComposerSubmit" disabled>
                         <i class="bi bi-send-fill"></i>
                     </button>
@@ -483,7 +632,9 @@
     const firebaseClientConfig = @json($firebaseClientConfig ?? []);
     const firebaseServerReady = @json($firebaseServerReady ?? false);
     const firebaseTokenEndpoint = @json($firebaseTokenEndpoint ?? '');
+    const chatAttachmentUploadEndpoint = @json($chatAttachmentUploadEndpoint ?? '');
     const currentUserMeta = @json($currentUserMeta ?? []);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     const messagingShell = document.getElementById('waMessagingShell');
     const conversationListElement = document.getElementById('conversationList');
@@ -495,6 +646,9 @@
     const chatProjectLinkElement = document.getElementById('chatProjectLink');
     const chatMessagesElement = document.getElementById('chatMessages');
     const chatComposerForm = document.getElementById('chatComposerForm');
+    const chatAttachmentInput = document.getElementById('chatAttachmentInput');
+    const chatAttachmentButton = document.getElementById('chatAttachmentButton');
+    const chatAttachmentPreviewList = document.getElementById('chatAttachmentPreviewList');
     const chatComposerInput = document.getElementById('chatComposerInput');
     const chatComposerSubmit = document.getElementById('chatComposerSubmit');
     const chatSystemStatus = document.getElementById('chatSystemStatus');
@@ -506,6 +660,9 @@
     const unsubscribeConversationMeta = [];
     let db = null;
     let authUserUid = null;
+    let pendingAttachmentFiles = [];
+    let pendingConversationId = null;
+    let firebaseBootFailed = false;
 
     for (const context of conversationContexts) {
         conversationStateMap.set(context.conversation_id, {
@@ -541,6 +698,28 @@
             hour: '2-digit',
             minute: '2-digit',
         });
+    }
+
+    function formatFileSize(fileSize) {
+        const size = Number(fileSize || 0);
+
+        if (size <= 0) {
+            return '';
+        }
+
+        if (size < 1024 * 1024) {
+            return `${(size / 1024).toFixed(1)} KB`;
+        }
+
+        return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    function makeAttachmentPreviewId() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+
+        return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
 
     function initialsFromName(name) {
@@ -582,7 +761,130 @@
             return 'Firebase authentication failed. Refresh the page and sign in again.';
         }
 
+        if (code === 'auth/unauthorized-domain' || rawMessage.toLowerCase().includes('unauthorized-domain')) {
+            return `Firebase blocked ${window.location.hostname}. Add this domain in Firebase Authentication > Settings > Authorized domains, then reload.`;
+        }
+
         return rawMessage || fallbackMessage || 'Unexpected Firebase error.';
+    }
+
+    function attachmentPreviewLabel(attachments) {
+        if (!Array.isArray(attachments) || attachments.length === 0) {
+            return '';
+        }
+
+        if (attachments.length === 1) {
+            return attachments[0]?.media_type === 'video' ? '[Video]' : '[Image]';
+        }
+
+        return `[${attachments.length} attachments]`;
+    }
+
+    function buildMessagePreview(messageText, attachments = []) {
+        const trimmedMessage = String(messageText || '').trim();
+        const attachmentLabel = attachmentPreviewLabel(attachments);
+
+        if (trimmedMessage !== '' && attachmentLabel !== '') {
+            return `${trimmedMessage} ${attachmentLabel}`.trim().substring(0, 160);
+        }
+
+        if (trimmedMessage !== '') {
+            return trimmedMessage.substring(0, 160);
+        }
+
+        return attachmentLabel || 'New message';
+    }
+
+    function clearPendingAttachments() {
+        pendingAttachmentFiles.forEach((attachment) => {
+            if (attachment.previewUrl) {
+                URL.revokeObjectURL(attachment.previewUrl);
+            }
+        });
+
+        pendingAttachmentFiles = [];
+        chatAttachmentInput.value = '';
+        renderPendingAttachmentPreviews();
+    }
+
+    function renderPendingAttachmentPreviews() {
+        if (!pendingAttachmentFiles.length) {
+            chatAttachmentPreviewList.innerHTML = '';
+            chatAttachmentPreviewList.classList.add('d-none');
+            return;
+        }
+
+        chatAttachmentPreviewList.classList.remove('d-none');
+        chatAttachmentPreviewList.innerHTML = pendingAttachmentFiles.map((attachment) => {
+            const safeName = escapeHtml(attachment.file.name || 'Attachment');
+            const safeSize = escapeHtml(formatFileSize(attachment.file.size));
+            const previewContent = attachment.type === 'video'
+                ? `<video class="wa-attachment-preview-thumb" muted playsinline preload="metadata"><source src="${escapeHtml(attachment.previewUrl)}" type="${escapeHtml(attachment.file.type || 'video/mp4')}"></video>`
+                : `<img src="${escapeHtml(attachment.previewUrl)}" alt="${safeName}" class="wa-attachment-preview-thumb">`;
+
+            return `
+                <div class="wa-attachment-preview-card">
+                    <button type="button" class="wa-attachment-remove" data-remove-attachment="${escapeHtml(attachment.id)}" aria-label="Remove attachment">
+                        <i class="bi bi-x"></i>
+                    </button>
+                    ${previewContent}
+                    <div class="wa-attachment-preview-meta">
+                        <p class="wa-attachment-preview-name">${safeName}</p>
+                        <p class="wa-attachment-preview-size">${safeSize}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        chatAttachmentPreviewList.querySelectorAll('[data-remove-attachment]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const attachmentId = button.getAttribute('data-remove-attachment');
+                if (!attachmentId) {
+                    return;
+                }
+
+                const attachmentToRemove = pendingAttachmentFiles.find((attachment) => attachment.id === attachmentId);
+                if (attachmentToRemove?.previewUrl) {
+                    URL.revokeObjectURL(attachmentToRemove.previewUrl);
+                }
+
+                pendingAttachmentFiles = pendingAttachmentFiles.filter((attachment) => attachment.id !== attachmentId);
+                renderPendingAttachmentPreviews();
+            });
+        });
+    }
+
+    function renderMessageAttachment(attachment) {
+        const url = String(attachment?.url || '').trim();
+        if (url === '') {
+            return '';
+        }
+
+        const mediaType = String(attachment?.media_type || 'image');
+        const originalName = String(attachment?.original_name || (mediaType === 'video' ? 'Video' : 'Image'));
+        const safeUrl = escapeHtml(url);
+        const safeName = escapeHtml(originalName);
+        const safeMimeType = escapeHtml(String(attachment?.mime_type || (mediaType === 'video' ? 'video/mp4' : 'image/jpeg')));
+
+        if (mediaType === 'video') {
+            return `
+                <div class="wa-message-attachment-card">
+                    <video class="wa-message-video" controls preload="metadata" playsinline>
+                        <source src="${safeUrl}" type="${safeMimeType}">
+                    </video>
+                    <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="wa-message-attachment-name">${safeName}</a>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="wa-message-attachment-card">
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="wa-message-attachment-link">
+                    <img src="${safeUrl}" alt="${safeName}" class="wa-message-image">
+                </a>
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="wa-message-attachment-name">${safeName}</a>
+            </div>
+        `;
     }
 
     function sortedConversations() {
@@ -690,14 +992,29 @@
             const isMine = senderUid === authUserUid;
             const rowClass = isMine ? 'me' : 'other';
             const text = String(messageData.text || '');
+            const attachments = Array.isArray(messageData.attachments) ? messageData.attachments : [];
             const createdAt = messageData.created_at?.toDate ? messageData.created_at.toDate() : null;
             const time = createdAt ? createdAt.toLocaleString([], {
                 hour: '2-digit',
                 minute: '2-digit',
             }) : '';
             const safeText = escapeHtml(text.trim());
+            const attachmentsHtml = attachments.length > 0
+                ? `<div class="wa-message-attachments">${attachments.map((attachment) => renderMessageAttachment(attachment)).join('')}</div>`
+                : '';
+            const textHtml = safeText !== '' ? `<p class="wa-msg-text">${safeText}</p>` : '';
 
-            return `<div class="wa-message-row ${rowClass}"><div class="wa-bubble"><span class="wa-msg-text">${safeText}</span><span class="wa-time">${escapeHtml(time)}</span></div></div>`;
+            return `
+                <div class="wa-message-row ${rowClass}">
+                    <div class="wa-bubble">
+                        ${attachmentsHtml}
+                        ${textHtml}
+                        <div class="wa-message-footer">
+                            <span class="wa-time">${escapeHtml(time)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }).join('');
 
         chatMessagesElement.innerHTML = html;
@@ -737,14 +1054,31 @@
 
     function selectConversation(conversationId) {
         const context = conversationStateMap.get(conversationId);
-        if (!context || !db) {
+        if (!context) {
             return;
         }
 
+        if (activeConversationId !== conversationId) {
+            clearPendingAttachments();
+        }
+
         activeConversationId = conversationId;
+        pendingConversationId = conversationId;
         renderConversationList();
         setChatHeader(context);
         messagingShell.classList.add('wa-mobile-chat-active');
+
+        if (!db) {
+            setSystemStatus(
+                firebaseBootFailed
+                    ? `Realtime chat is unavailable on ${window.location.hostname} until Firebase connects.`
+                    : 'Connecting to realtime chat. Please wait a moment.',
+                firebaseBootFailed ? 'error' : 'muted',
+            );
+
+            return;
+        }
+
         markConversationRead(context).catch(() => {});
 
         if (unsubscribeMessages) {
@@ -762,7 +1096,10 @@
         });
 
         chatComposerInput.disabled = false;
+        chatAttachmentInput.disabled = false;
+        chatAttachmentButton.disabled = false;
         chatComposerSubmit.disabled = false;
+        pendingConversationId = null;
         chatComposerInput.focus();
     }
 
@@ -794,7 +1131,41 @@
         }
     }
 
-    async function sendActiveConversationMessage(messageText) {
+    async function uploadChatAttachments(conversationId, attachments) {
+        if (!chatAttachmentUploadEndpoint) {
+            throw new Error('Attachment uploads are not configured.');
+        }
+
+        const formData = new FormData();
+        formData.append('conversation_id', conversationId);
+
+        attachments.forEach((attachment) => {
+            formData.append('attachments[]', attachment.file, attachment.file.name);
+        });
+
+        const response = await fetch(chatAttachmentUploadEndpoint, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: formData,
+            credentials: 'same-origin',
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !Array.isArray(payload.attachments)) {
+            const validationMessage = payload?.errors
+                ? Object.values(payload.errors).flat().join(' ')
+                : null;
+
+            throw new Error(validationMessage || payload.message || 'Failed to upload attachments.');
+        }
+
+        return payload.attachments;
+    }
+
+    async function sendActiveConversationMessage(messageText, attachments = []) {
         if (!activeConversationId || !db) {
             return;
         }
@@ -818,7 +1189,7 @@
             participants,
             relationship_type: context.relationship.type,
             relationship_status: context.relationship.status,
-            last_message_preview: messageText.substring(0, 160),
+            last_message_preview: buildMessagePreview(messageText, attachments),
             last_message_sender_uid: authUserUid,
             last_message_at: serverTimestamp(),
             unread_owner_count: currentUserMeta.role === 'Owner' ? 0 : increment(1),
@@ -828,6 +1199,7 @@
 
         await addDoc(collection(conversationRef, 'messages'), {
             text: messageText,
+            attachments,
             sender_uid: authUserUid,
             sender_user_id: currentUserMeta.user_id,
             sender_name: currentUserMeta.name,
@@ -879,15 +1251,17 @@
 
             authUserUid = String(payload.uid || currentUserMeta.firebase_uid || '');
             db = getFirestore(app);
+            firebaseBootFailed = false;
 
             attachConversationMetadataListeners();
             setSystemStatus('Connected. Real-time chat is active.', 'success');
 
-            const firstConversation = filteredConversations()[0];
-            if (firstConversation) {
-                selectConversation(firstConversation.conversation_id);
+            const preferredConversationId = pendingConversationId || filteredConversations()[0]?.conversation_id || null;
+            if (preferredConversationId) {
+                selectConversation(preferredConversationId);
             }
         } catch (error) {
+            firebaseBootFailed = true;
             setSystemStatus(normalizeFirebaseError(error, 'Failed to initialize Firebase chat.'), 'error');
         }
     }
@@ -896,6 +1270,52 @@
         conversationSearchQuery = conversationSearchInput.value || '';
         renderConversationList();
     });
+
+    if (chatAttachmentButton) {
+        chatAttachmentButton.addEventListener('click', () => {
+            if (chatAttachmentButton.disabled) {
+                return;
+            }
+
+            chatAttachmentInput.click();
+        });
+    }
+
+    if (chatAttachmentInput) {
+        chatAttachmentInput.addEventListener('change', () => {
+            const selectedFiles = Array.from(chatAttachmentInput.files || []);
+            if (!selectedFiles.length) {
+                return;
+            }
+
+            for (const file of selectedFiles) {
+                if (pendingAttachmentFiles.length >= 5) {
+                    setSystemStatus('You can attach up to 5 files in one message.', 'error');
+                    break;
+                }
+
+                if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+                    setSystemStatus('Only image and video files are allowed.', 'error');
+                    continue;
+                }
+
+                if (file.size > 25 * 1024 * 1024) {
+                    setSystemStatus('Each attachment must be 25 MB or smaller.', 'error');
+                    continue;
+                }
+
+                pendingAttachmentFiles.push({
+                    id: makeAttachmentPreviewId(),
+                    file,
+                    type: file.type.startsWith('video/') ? 'video' : 'image',
+                    previewUrl: URL.createObjectURL(file),
+                });
+            }
+
+            chatAttachmentInput.value = '';
+            renderPendingAttachmentPreviews();
+        });
+    }
 
     if (mobileBackButton) {
         mobileBackButton.addEventListener('click', () => {
@@ -907,25 +1327,42 @@
         event.preventDefault();
 
         const rawMessage = chatComposerInput.value.trim();
-        if (!rawMessage || !db) {
+        if ((!rawMessage && pendingAttachmentFiles.length === 0) || !db || !activeConversationId) {
             return;
         }
 
+        const attachmentsToUpload = [...pendingAttachmentFiles];
         chatComposerSubmit.disabled = true;
+        chatComposerInput.disabled = true;
+        chatAttachmentButton.disabled = true;
+        chatAttachmentInput.disabled = true;
 
         try {
-            await sendActiveConversationMessage(rawMessage);
+            const uploadedAttachments = attachmentsToUpload.length > 0
+                ? await uploadChatAttachments(activeConversationId, attachmentsToUpload)
+                : [];
+
+            await sendActiveConversationMessage(rawMessage, uploadedAttachments);
             chatComposerInput.value = '';
+            clearPendingAttachments();
             setSystemStatus('Message sent.', 'success');
         } catch (error) {
             setSystemStatus(normalizeFirebaseError(error, 'Failed to send message.'), 'error');
         } finally {
-            chatComposerSubmit.disabled = false;
-            chatComposerInput.focus();
+            const composerEnabled = Boolean(activeConversationId);
+            chatComposerInput.disabled = !composerEnabled;
+            chatComposerSubmit.disabled = !composerEnabled;
+            chatAttachmentButton.disabled = !composerEnabled;
+            chatAttachmentInput.disabled = !composerEnabled;
+            if (composerEnabled) {
+                chatComposerInput.focus();
+            }
         }
     });
 
     window.addEventListener('beforeunload', () => {
+        clearPendingAttachments();
+
         if (unsubscribeMessages) {
             unsubscribeMessages();
         }
