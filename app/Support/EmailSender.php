@@ -34,7 +34,7 @@ class EmailSender
     {
         $branding = config('branding', []);
         $body = Str::of($htmlBody)->trim()->replace("\r\n", "\n")->toString();
-        $logoUrl = $branding['logo'] ?? asset('images/logo-mark.svg');
+        $logoUrl = $branding['logo'] ?? (rtrim(config('app.url'), '/').'/images/logo-mark.svg');
         $socialLinks = $branding['social_links'] ?? [];
 
         Mail::send('emails.layout', compact('subject', 'body', 'logoUrl', 'socialLinks'), function ($message) use ($recipientEmail, $recipientName, $subject): void {

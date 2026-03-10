@@ -15,6 +15,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (! $this->app->bound('request')) {
+            $this->app->instance('request', \Illuminate\Http\Request::create(config('app.url')));
+        }
         //
     }
 

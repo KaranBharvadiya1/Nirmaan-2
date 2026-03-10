@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\SignupRequest;
 use App\Models\User;
+use App\Support\EmailSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,10 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
+        EmailSender::sendTemplate('welcome', $user->email, [
+            'name' => $user->first_name,
+            'verification_url' => config('app.url'),
+        ], $user->name);
         $request->session()->regenerate();
 
         return redirect()
