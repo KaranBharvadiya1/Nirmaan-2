@@ -7,6 +7,7 @@ use App\Models\ProjectHire;
 use App\Models\Shortlist;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class OwnerNotificationController extends Controller
 {
@@ -62,20 +63,29 @@ class OwnerNotificationController extends Controller
             });
         }
 
-        $recentBids = $bidQuery
-            ->orderByDesc('created_at')
-            ->limit(6)
-            ->get();
+        $cacheKey = sprintf('owner_notifications:%d:%s', $ownerId, md5($search));
+        [$recentBids, $recentHires, $recentShortlists] = Cache::remember(
+            $cacheKey,
+            now()->addSeconds(30),
+            function () use ($bidQuery, $hireQuery, $shortlistQuery) {
+                $recentBids = $bidQuery
+                    ->orderByDesc('created_at')
+                    ->limit(6)
+                    ->get();
 
-        $recentHires = $hireQuery
-            ->orderByDesc('updated_at')
-            ->limit(4)
-            ->get();
+                $recentHires = $hireQuery
+                    ->orderByDesc('updated_at')
+                    ->limit(4)
+                    ->get();
 
-        $recentShortlists = $shortlistQuery
-            ->orderByDesc('updated_at')
-            ->limit(4)
-            ->get();
+                $recentShortlists = $shortlistQuery
+                    ->orderByDesc('updated_at')
+                    ->limit(4)
+                    ->get();
+
+                return [$recentBids, $recentHires, $recentShortlists];
+            }
+        );
 
         return view('owner.notifications.index', compact('recentBids', 'recentHires', 'recentShortlists', 'search'));
     }
