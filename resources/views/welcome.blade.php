@@ -19,6 +19,47 @@
             font-family: "Montserrat", sans-serif;
             scroll-behavior: smooth;
         }
+        .auth-branding {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .auth-logo {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2452e6, #4d7cff);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.8rem;
+            margin-bottom: 0.25rem;
+            box-shadow: 0 10px 30px rgba(36, 82, 230, 0.4);
+        }
+        .auth-socials {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 1.25rem;
+        }
+        .auth-socials a {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 1px solid rgba(37, 99, 235, 0.2);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #2452e6;
+            background: #fff;
+            transition: all 0.2s ease;
+        }
+        .auth-socials a:hover {
+            border-color: #2452e6;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(36, 82, 230, 0.3);
+        }
 
         .navbar-glass {
             background: rgba(255, 255, 255, 0.92);
@@ -468,6 +509,17 @@
                             <button type="button" class="btn btn-link p-0 align-baseline" onclick="switchAuthForm('signup')">Sign Up</button>
                         </p>
                     </form>
+                    <div class="auth-branding">
+                        <div class="auth-logo">N</div>
+                        <p class="small text-muted mb-0">Stay connected with Nirmaan</p>
+                    </div>
+                    <div class="auth-socials">
+                        @foreach (config('branding.social_links', []) as $platform => $url)
+                        <a href="{{ $url }}" target="_blank" rel="noreferrer" aria-label="{{ ucfirst($platform) }}">
+                            <i class="bi bi-{{ $platform === 'twitter' ? 'twitter' : $platform }}"></i>
+                        </a>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
