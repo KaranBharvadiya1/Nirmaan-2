@@ -203,6 +203,7 @@
         $menuBadgeCount = static function (string $key) use ($layoutNotificationCounts): int {
             return match ($key) {
                 'bids' => (int) ($layoutNotificationCounts['bids'] ?? 0),
+                'notifications' => (int) ($layoutNotificationCounts['notifications'] ?? 0),
                 default => 0,
             };
         };
@@ -215,6 +216,7 @@
                     ['key' => 'projects', 'icon' => 'bi-kanban', 'label' => 'Projects', 'url' => route('owner.projects')],
                     ['key' => 'bids', 'icon' => 'bi-receipt-cutoff', 'label' => 'Bids', 'url' => route('owner.bids')],
                     ['key' => 'hires', 'icon' => 'bi-person-vcard', 'label' => 'Hires', 'url' => route('owner.hires')],
+                    ['key' => 'shortlist', 'icon' => 'bi-star', 'label' => 'Shortlist', 'url' => route('owner.shortlist.index')],
                     ['key' => 'contractors', 'icon' => 'bi-people', 'label' => 'Contractors', 'url' => '#'],
                 ],
             ],
@@ -222,6 +224,7 @@
                 'title' => 'Communication',
                 'items' => [
                     ['key' => 'messages', 'icon' => 'bi-chat-left-dots', 'label' => 'Messages', 'url' => route('owner.messages')],
+                    ['key' => 'notifications', 'icon' => 'bi-bell', 'label' => 'Notifications', 'url' => route('owner.notifications')],
                     ['key' => 'settings', 'icon' => 'bi-gear', 'label' => 'Settings', 'url' => route('owner.settings')],
                 ],
             ],

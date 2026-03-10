@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\OwnerUpdateBidStatusRequest;
 use App\Models\Bid;
 use App\Models\ProjectHire;
+use App\Models\Shortlist;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -48,8 +49,14 @@ class OwnerBidController extends Controller
 
         $bids = $bidsQuery->paginate(12)->withQueryString();
         $bidStats = $this->bidStatsForOwner($ownerId);
+        $contractorIds = $bids->pluck('contractor_id')->filter()->unique()->values();
+        $shortlistContractorIds = Shortlist::query()
+            ->where('owner_id', $ownerId)
+            ->whereIn('contractor_id', $contractorIds)
+            ->pluck('contractor_id')
+            ->all();
 
-        return view('owner.bids.index', compact('bids', 'statusFilter', 'bidStats'));
+        return view('owner.bids.index', compact('bids', 'statusFilter', 'bidStats', 'shortlistContractorIds'));
     }
 
     /** Apply an owner bid-status change, including hire creation and auto-rejections when needed. */

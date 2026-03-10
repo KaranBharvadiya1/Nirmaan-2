@@ -9,8 +9,10 @@ use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\OwnerBidController;
 use App\Http\Controllers\OwnerDashboardController;
 use App\Http\Controllers\OwnerHireController;
+use App\Http\Controllers\OwnerNotificationController;
 use App\Http\Controllers\OwnerProjectController;
 use App\Http\Controllers\OwnerSettingsController;
+use App\Http\Controllers\OwnerShortlistController;
 use Illuminate\Support\Facades\Route;
 
 // Public landing page and marketing form routes.
@@ -59,8 +61,15 @@ Route::middleware(['auth', 'role:Owner'])->prefix('owner')->name('owner.')->grou
     Route::get('/hires', [OwnerHireController::class, 'showOwnerHires'])->name('hires');
     Route::patch('/hires/{projectHire}/status', [OwnerHireController::class, 'saveOwnerHireStatus'])->name('hires.save_status');
 
+    // Owner shortlist and decision support routes.
+    Route::get('/shortlist', [OwnerShortlistController::class, 'index'])->name('shortlist.index');
+    Route::post('/shortlist', [OwnerShortlistController::class, 'store'])->name('shortlist.store');
+    Route::patch('/shortlist/{shortlist}', [OwnerShortlistController::class, 'update'])->name('shortlist.update');
+    Route::delete('/shortlist/{shortlist}', [OwnerShortlistController::class, 'destroy'])->name('shortlist.destroy');
+
     // Owner communication and account settings routes.
     Route::get('/messages', [MessagingController::class, 'showOwnerMessages'])->name('messages');
+    Route::get('/notifications', [OwnerNotificationController::class, 'index'])->name('notifications');
     Route::get('/settings', [OwnerSettingsController::class, 'showProfileSettings'])->name('settings');
     Route::put('/settings', [OwnerSettingsController::class, 'saveProfileSettings'])->name('settings.save');
 });

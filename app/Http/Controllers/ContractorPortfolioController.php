@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ContractorWorkSampleRequest;
+use App\Models\Bid;
 use App\Models\ContractorWorkMedia;
 use App\Models\ContractorWorkSample;
 use App\Models\User;
@@ -130,8 +131,50 @@ class ContractorPortfolioController extends Controller
             ->get();
 
         $portfolioStats = $this->publicPortfolioStats($workSamples);
+        $viewerId = $viewer?->id;
+        $viewerIsOwner = $viewer?->role === 'Owner';
+        $ownerBidStats = [
+            'pending' => 0,
+            'shortlisted' => 0,
+            'accepted' => 0,
+            'rejected' => 0,
+            'withdrawn' => 0,
+            'all' => 0,
+        ];
+        $ownerBids = collect();
 
-        return view('contractors.show', compact('contractor', 'workSamples', 'portfolioStats'));
+        if ($viewerIsOwner) {
+            $statusCounts = Bid::query()
+                ->join('projects', 'projects.id', '=', 'bids.project_id')
+                ->where('projects.owner_id', $viewerId)
+                ->where('bids.contractor_id', $contractor->id)
+                ->selectRaw('bids.status as status_key, COUNT(bids.id) as aggregate')
+                ->groupBy('bids.status')
+                ->pluck('aggregate', 'status_key')
+                ->mapWithKeys(static fn ($count, $status): array => [(string) $status => (int) $count])
+                ->all();
+
+            $ownerBidStats = [
+                'pending' => (int) ($statusCounts['pending'] ?? 0),
+                'shortlisted' => (int) ($statusCounts['shortlisted'] ?? 0),
+                'accepted' => (int) ($statusCounts['accepted'] ?? 0),
+                'rejected' => (int) ($statusCounts['rejected'] ?? 0),
+                'withdrawn' => (int) ($statusCounts['withdrawn'] ?? 0),
+            ];
+            $ownerBidStats['all'] = array_sum($ownerBidStats);
+
+            $ownerBids = Bid::query()
+                ->where('contractor_id', $contractor->id)
+                ->whereHas('project', function ($query) use ($viewerId): void {
+                    $query->where('owner_id', $viewerId);
+                })
+                ->with(['project:id,title,reference_code', 'project.hire'])
+                ->latest('created_at')
+                ->limit(5)
+                ->get();
+        }
+
+        return view('contractors.show', compact('contractor', 'workSamples', 'portfolioStats', 'ownerBids', 'ownerBidStats', 'viewerIsOwner'));
     }
 
     /** Abort when a work sample does not belong to the authenticated contractor. */

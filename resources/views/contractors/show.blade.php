@@ -92,10 +92,11 @@
 @php
     $fullName = trim(($contractor->first_name ?? '').' '.($contractor->last_name ?? ''));
     $initial = strtoupper(substr($contractor->first_name ?? 'C', 0, 1));
+    $viewerIsOwner = $viewerIsOwner ?? false;
 @endphp
 
-<div class="hero-panel mb-4">
-    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+    <div class="hero-panel mb-4">
+        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
         <div class="d-flex align-items-start gap-3">
             @if ($contractor->profile_image_url)
             <img src="{{ $contractor->profile_image_url }}" alt="Contractor profile image" class="profile-avatar">
@@ -117,6 +118,28 @@
             <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Back
             </a>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            @if ($contractor->availability_label)
+            <span class="badge text-bg-light border"><i class="bi bi-calendar-check me-1"></i>{{ $contractor->availability_label }}</span>
+            @endif
+            @if ($contractor->languages)
+            <span class="badge text-bg-light border"><i class="bi bi-translate me-1"></i>{{ $contractor->languages }}</span>
+            @endif
+            @if ($contractor->service_areas)
+            <span class="badge text-bg-light border"><i class="bi bi-geo-alt me-1"></i>{{ $contractor->service_areas }}</span>
+            @endif
+            @if ($contractor->team_size)
+            <span class="badge text-bg-light border"><i class="bi bi-people me-1"></i>Team of {{ $contractor->team_size }}</span>
+            @endif
+            @if ($contractor->hourly_rate_from || $contractor->hourly_rate_to)
+            <span class="badge text-bg-light border">
+                <i class="bi bi-currency-rupee me-1"></i>
+                {{ $contractor->hourly_rate_from ? '₹'.number_format($contractor->hourly_rate_from, 2) : '—' }}
+                –
+                {{ $contractor->hourly_rate_to ? '₹'.number_format($contractor->hourly_rate_to, 2) : 'Negotiable' }}
+            </span>
+            @endif
         </div>
     </div>
 </div>
@@ -141,6 +164,88 @@
         </div>
     </div>
 </div>
+
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="sample-card">
+            <h2 class="h5 fw-bold">Profile snapshot</h2>
+            <p class="text-secondary mb-3">
+                {{ $contractor->contractor_bio ?: 'This contractor has not completed their profile yet.' }}
+            </p>
+            <div class="d-flex flex-wrap gap-3 mb-3">
+                @if ($contractor->trades)
+                <span class="badge text-bg-light border"><i class="bi bi-hammer me-1"></i>{{ $contractor->trades }}</span>
+                @endif
+                @if ($contractor->years_experience)
+                <span class="badge text-bg-light border"><i class="bi bi-calendar-workweek me-1"></i>{{ $contractor->years_experience }} yrs</span>
+                @endif
+            </div>
+            @if ($contractor->video_intro_url)
+            <a href="{{ $contractor->video_intro_url }}" target="_blank" rel="noreferrer" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-play-circle me-1"></i>Watch introduction
+            </a>
+            @endif
+        </div>
+    </div>
+</div>
+
+@if ($viewerIsOwner ?? false)
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="sample-card">
+            <div class="d-flex flex-column flex-md-row justify-content-between gap-3 align-items-start">
+                <div>
+                    <p class="text-uppercase text-primary small mb-1">Decision Intelligence</p>
+                    <h2 class="h5 fw-bold mb-2">Owner-only insights</h2>
+                </div>
+                <form method="POST" action="{{ route('owner.shortlist.store') }}">
+                    @csrf
+                    <input type="hidden" name="contractor_id" value="{{ $contractor->id }}">
+                    @if ($ownerBids->first()?->project_id)
+                    <input type="hidden" name="project_id" value="{{ $ownerBids->first()->project_id }}">
+                    @endif
+                    @if ($ownerBids->first()?->id)
+                    <input type="hidden" name="bid_id" value="{{ $ownerBids->first()->id }}">
+                    @endif
+                    <button type="submit" class="btn btn-warning btn-sm text-white">
+                        <i class="bi bi-star me-1"></i>Add to shortlist
+                    </button>
+                </form>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @foreach (['pending', 'shortlisted', 'accepted', 'rejected', 'withdrawn'] as $statusKey)
+                <span class="badge text-bg-light border">
+                    {{ ucfirst($statusKey) }}: {{ $ownerBidStats[$statusKey] ?? 0 }}
+                </span>
+                @endforeach
+                <span class="badge bg-primary">Total: {{ $ownerBidStats['all'] ?? 0 }}</span>
+            </div>
+            <div class="list-group list-group-flush">
+                @forelse ($ownerBids as $bid)
+                <div class="list-group-item px-0 border-0">
+                    <div class="d-flex flex-column flex-md-row justify-content-between">
+                        <div>
+                            <p class="small text-secondary mb-1">{{ $bid->project->reference_code ?? 'Project' }}</p>
+                            <h3 class="h6 fw-bold mb-1">{{ $bid->project->title ?? 'Untitled project' }}</h3>
+                            <p class="text-secondary mb-1">Quote: &#8377;{{ number_format((float) $bid->quote_amount, 2) }} · Timeline: {{ $bid->proposed_timeline_days ? $bid->proposed_timeline_days.' days' : 'TBD' }}</p>
+                        </div>
+                        <span class="badge text-bg-info align-self-start">{{ ucfirst($bid->status) }}</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <a href="{{ route('owner.projects.details', $bid->project) }}" class="btn btn-outline-secondary btn-sm">Open project</a>
+                        <a href="{{ route('owner.bids') }}#bid-{{ $bid->id }}" class="btn btn-outline-primary btn-sm">Open bid</a>
+                    </div>
+                </div>
+                @empty
+                <div class="list-group-item px-0 border-0">
+                    <p class="text-secondary mb-0">No bids recorded yet between you and this contractor.</p>
+                </div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 @if ($workSamples->isEmpty())
 <div class="sample-card text-center py-5">

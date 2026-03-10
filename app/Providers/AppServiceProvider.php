@@ -33,8 +33,10 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
+            $unreadBids = $this->bidNotificationCountForUser($user);
             $view->with('layoutNotificationCounts', [
-                'bids' => $this->bidNotificationCountForUser($user),
+                'bids' => $unreadBids,
+                'notifications' => $unreadBids,
             ]);
             $view->with('layoutMessagingBadgeConfig', $this->messagingBadgeConfigForUser($user, $tokenFactory));
         });

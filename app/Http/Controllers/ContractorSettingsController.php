@@ -34,6 +34,17 @@ class ContractorSettingsController extends Controller
             $user->profile_image_path = $request->file('profile_image')->store('contractor-profiles', 'public');
         }
 
+        $user->contractor_bio = $validated['contractor_bio'] ?? null;
+        $user->years_experience = $validated['years_experience'] ?? null;
+        $user->trades = $validated['trades'] ?? null;
+        $user->service_areas = $validated['service_areas'] ?? null;
+        $user->languages = $validated['languages'] ?? null;
+        $user->team_size = $validated['team_size'] ?? null;
+        $user->availability_status = $validated['availability_status'] ?? null;
+        $user->hourly_rate_from = $validated['hourly_rate_from'] ?? null;
+        $user->hourly_rate_to = $validated['hourly_rate_to'] ?? null;
+        $user->video_intro_url = $validated['video_intro_url'] ?? null;
+
         if (! empty($validated['password'])) {
             $user->password = $validated['password'];
         }

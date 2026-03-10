@@ -28,6 +28,16 @@ class User extends Authenticatable
         'profile_image_path',
         'email',
         'password',
+        'contractor_bio',
+        'years_experience',
+        'trades',
+        'service_areas',
+        'languages',
+        'team_size',
+        'availability_status',
+        'hourly_rate_from',
+        'hourly_rate_to',
+        'video_intro_url',
     ];
 
     /**
@@ -61,6 +71,18 @@ class User extends Authenticatable
         }
 
         return Storage::url($this->profile_image_path);
+    }
+
+    /** Provide a human-readable availability label for contractor profiles. */
+    public function getAvailabilityLabelAttribute(): string
+    {
+        return match ($this->availability_status) {
+            'available' => 'Available now',
+            'booked' => 'Currently booked',
+            'limited' => 'Limited availability',
+            'consultation' => 'Consultation only',
+            default => 'Contact for availability',
+        };
     }
 
     /**
@@ -111,5 +133,25 @@ class User extends Authenticatable
     public function contractorWorkSamples(): HasMany
     {
         return $this->hasMany(ContractorWorkSample::class, 'contractor_id');
+    }
+
+    /**
+     * Get shortlist entries created by this owner account.
+     *
+     * @return HasMany<Shortlist, $this>
+     */
+    public function createdShortlists(): HasMany
+    {
+        return $this->hasMany(Shortlist::class, 'owner_id');
+    }
+
+    /**
+     * Get shortlist records that refer to this contractor.
+     *
+     * @return HasMany<Shortlist, $this>
+     */
+    public function shortlistCandidates(): HasMany
+    {
+        return $this->hasMany(Shortlist::class, 'contractor_id');
     }
 }

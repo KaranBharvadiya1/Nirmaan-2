@@ -74,6 +74,7 @@
             default => 'text-bg-secondary',
         };
     };
+    $shortlistedContractorIds = collect($shortlistContractorIds ?? []);
 @endphp
 
 <div class="heading-panel mb-4">
@@ -108,7 +109,7 @@
 <section>
     <div class="d-flex flex-column gap-3">
         @foreach($bids as $bid)
-        <article class="card bid-card p-3 p-md-4">
+        <article id="bid-{{ $bid->id }}" class="card bid-card p-3 p-md-4">
             <div class="row g-3 align-items-center">
                 <div class="col-12 col-lg-5">
                     <p class="text-uppercase text-primary small fw-semibold mb-1">{{ $bid->project->reference_code }}</p>
@@ -142,6 +143,21 @@
                         <div class="d-flex flex-wrap gap-2">
                             <a href="{{ route('owner.projects.details', $bid->project) }}" class="btn btn-outline-primary btn-sm">Open Project</a>
                             <a href="{{ route('contractors.portfolio.show', $bid->contractor) }}" class="btn btn-outline-secondary btn-sm">View Portfolio</a>
+                            @if ($shortlistedContractorIds->contains($bid->contractor_id))
+                            <span class="badge bg-warning text-dark rounded-pill d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-star-fill fs-5"></i> Shortlisted
+                            </span>
+                            @else
+                            <form method="POST" action="{{ route('owner.shortlist.store') }}" class="mb-0">
+                                @csrf
+                                <input type="hidden" name="contractor_id" value="{{ $bid->contractor_id }}">
+                                <input type="hidden" name="project_id" value="{{ $bid->project_id }}">
+                                <input type="hidden" name="bid_id" value="{{ $bid->id }}">
+                                <button type="submit" class="btn btn-warning btn-sm text-white">
+                                    <i class="bi bi-star me-1"></i>Add to shortlist
+                                </button>
+                            </form>
+                            @endif
                         </div>
                     </div>
                 </div>
