@@ -28,7 +28,10 @@
             text-align: center;
             margin-bottom: 1.5rem;
         }
-        .logo-badge {
+        .logo-full img {
+            width: 140px;
+            height: auto;
+        }
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -82,10 +85,9 @@
     <div class="email-shell">
         <div class="email-card">
             <div class="email-header">
-            <div class="logo-badge">
-                <span class="logo-letter">{{ strtoupper(substr(config('branding.app_name', 'Nirmaan'), 0, 1)) }}</span>
+            <div class="logo-full">
+                <img src="{{ config('branding.logo_full') }}" alt="Nirmaan logo">
             </div>
-            <h2 style="margin:0;">{{ config('branding.app_name', 'Nirmaan') }}</h2>
             </div>
             <div class="email-body">
                 {!! $body !!}
